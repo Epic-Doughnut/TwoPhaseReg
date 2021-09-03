@@ -5,7 +5,7 @@
 #' @param Delta Specifies the column of the event indicator. This argument is required when performing proportional hazards regression.
 #' @param X Specifies the columns of the expensive covariates. Subjects with missing values of \code{X} are considered as those not selected in the second phase. This argument is required.
 #' @param Z Specifies the columns of the inexpensive covariates. Subjects with missing values of \code{Z} are omitted from the analysis. This argument is optional.
-#' @param Bspline_Z Specifies the columns of the B-spline basis. Subjects with missing values of \code{Bspline_Z} are omitted from the analysis. This argument is not needed when \code{X} is independent of \code{Z}. 
+#' @param Bspline_Z Specifies the columns of the B-spline basis. Subjects with missing values of \code{Bspline_Z} are omitted from the analysis. This argument is not needed when \code{X} is independent of \code{Z}.
 #' @param data Specifies the name of the dataset. This argument is required.
 #' @param hn_scale Specifies the scale of the perturbation constant in the variance estimation. For example, if \code{hn_scale = 0.5}, then the perturbation constant is \eqn{0.5n^{-1/2}}, where \eqn{n} is the first-phase sample size. The default value is \code{1}. This argument is optional. It is not needed when there is no \code{Z}.
 #' @param MAX_ITER Specifies the maximum number of iterations in the EM algorithm. The default number is \code{2000}. This argument is optional.
@@ -44,7 +44,7 @@
 # #' colnames(Bspline_Z) = paste("bs", 1:N_SIEVE, sep="")
 # #' dat = data.frame(Y=simY, X=simX, Z=simZ, Bspline_Z)
 # #' dat[-phase2.id,"X"] = NA
-# #' 
+# #'
 # #' res = smle(Y="Y", X="X", Z="Z", Bspline_Z=colnames(Bspline_Z), data=dat)
 # #' res
 # #'
@@ -79,9 +79,7 @@
 #' @importFrom Rcpp evalCpp
 #' @importFrom stats pchisq
 #' @exportPattern "^[[:alpha:]]+"
-smle <- function (Y=NULL, 
-	# L=NULL, 
-	Delta=NULL, X=NULL, Z=NULL, Bspline_Z=NULL, data=NULL, hn_scale=1, MAX_ITER=2000,
+smle <- function (Y=NULL, Delta=NULL, X=NULL, Z=NULL, Bspline_Z=NULL, data=NULL, hn_scale=1, MAX_ITER=2000,
     TOL=1E-4, noSE=FALSE, model="linear", verbose=FALSE) {
 
     ###############################################################################################################
@@ -89,7 +87,7 @@ smle <- function (Y=NULL,
     storage.mode(MAX_ITER) = "integer"
 	storage.mode(TOL) = "double"
 	storage.mode(noSE) = "integer"
-	
+
 	if (!(model %in% c("linear", "logistic", "coxph"))) {
 	    stop("Model should be linear, logistic, or coxph!")
 	}
@@ -103,7 +101,7 @@ smle <- function (Y=NULL,
 	} else {
 		vars_ph1 = Y
 	}
-	
+
 	if (model == "coxph") {
 		if (is.null(Delta)) {
 			stop("The event indicator Delta is not specified!")
@@ -129,12 +127,12 @@ smle <- function (Y=NULL,
 			stop("Cannot specify Bspline_Z when Z is not specified!")
 		}
 	}
-	
+
     id_exclude = c()
     for (var in vars_ph1) {
         id_exclude = union(id_exclude, which(is.na(data[,var])))
     }
-	
+
 	if (verbose) {
     	print(paste("There are", nrow(data), "observations in the dataset."))
     	print(paste(length(id_exclude), "observations are excluded due to missing Y, Delta, Z, or Bspline_Z."))
@@ -142,7 +140,7 @@ smle <- function (Y=NULL,
 	if (length(id_exclude) > 0) {
 		data = data[-id_exclude,]
 	}
-	
+
     n = nrow(data)
 	if (verbose) {
     	print(paste("There are", n, "observations in the analysis."))
@@ -158,28 +156,28 @@ smle <- function (Y=NULL,
     #### check data ###############################################################################################
 	###############################################################################################################
 
-	
-	
+
+
 	###############################################################################################################
-	#### prepare analysis##########################################################################################	
+	#### prepare analysis##########################################################################################
     Y_vec = c(as.vector(data[-id_phase1,Y]), as.vector(data[id_phase1,Y]))
 	storage.mode(Y_vec) = "double"
-	
+
 	if (!is.null(Delta))
 	{
 		Delta_vec = c(as.vector(data[-id_phase1,Delta]), as.vector(data[id_phase1,Delta]))
 		storage.mode(Delta_vec) = "integer"
 	}
-	
+
 	# if (!is.null(L))
 	# {
 	    # L_vec = c(as.vector(data[-id_phase1,L]), as.vector(data[id_phase1,L]))
 	    # storage.mode(L_vec) = "double"
 	# }
-	
+
     X_mat = as.matrix(data[-id_phase1,X])
 	storage.mode(X_mat) = "double"
-	
+
     if (!is.null(Z)) {
         Z_mat = rbind(as.matrix(data[-id_phase1,Z]), as.matrix(data[id_phase1,Z]))
 		storage.mode(Z_mat) = "double"
@@ -188,23 +186,23 @@ smle <- function (Y=NULL,
 			storage.mode(Bspline_Z_mat) = "double"
 		}
     }
-	
+
 	if (model == "coxph") {
 		cov_names = X
 	} else {
 		cov_names = c("Intercept", X)
-	}		
+	}
 	if (!is.null(Z)) {
 		cov_names = c(cov_names, Z)
 	}
-	
+
 	ncov = length(cov_names)
 	X_nc = length(X)
 	rowmap = rep(NA, ncov)
 	res_coefficients = matrix(NA, nrow=ncov, ncol=4)
 	colnames(res_coefficients) = c("Estimate", "SE", "Statistic", "p-value")
 	rownames(res_coefficients) = cov_names
-	
+
 	if (model %in% c("linear", "logistic")) {
 		if (is.null(Z)) {
 			Z_mat = rep(1., n)
@@ -222,26 +220,27 @@ smle <- function (Y=NULL,
 	    }
 		rowmap = 1:ncov
 	}
-	
+
 	hn = hn_scale/sqrt(n)
 	#### prepare analysis##########################################################################################
 	###############################################################################################################
-	
 
-	
+
+
 	###############################################################################################################
 	#### analysis #################################################################################################
 	if (model == "linear") {
 		if (is.null(Bspline_Z)) {
-			res = .Call("TwoPhase_MLE0", Y_vec, X_mat, Z_mat, MAX_ITER, TOL, noSE, package="TwoPhaseReg")
+			res = TwoPhase_MLE0(Y_vec, X_mat, Z_mat, MAX_ITER, TOL, noSE)
 		} else {
-			res = .Call("TwoPhase_GeneralSpline", Y_vec, X_mat, Z_mat, Bspline_Z_mat, hn, MAX_ITER, TOL, noSE, package="TwoPhaseReg")
+			# res = .Call("TwoPhase_GeneralSpline", Y_vec, X_mat, Z_mat, Bspline_Z_mat, hn, MAX_ITER, TOL, noSE, package="TwoPhaseReg")
+			res = TwoPhase_GeneralSpline(Y_vec, X_mat, Z_mat, Bspline_Z_mat, hn, MAX_ITER, TOL, noSE)
 		}
 	} else if (model == "logistic") {
 		if (is.null(Bspline_Z)) {
-			res = .Call("TwoPhase_MLE0_logistic", Y_vec, X_mat, Z_mat, MAX_ITER, TOL, noSE, package="TwoPhaseReg")
+			res = TwoPhase_MLE0_logistic(Y_vec, X_mat, Z_mat, MAX_ITER, TOL, noSE)
 		} else {
-			res = .Call("TwoPhase_GeneralSpline_logistic", Y_vec, X_mat, Z_mat, Bspline_Z_mat, hn, MAX_ITER, TOL, noSE, package="TwoPhaseReg")
+			res = TwoPhase_GeneralSpline_logistic(Y_vec, X_mat, Z_mat, Bspline_Z_mat, hn, MAX_ITER, TOL, noSE)
 		}
 	} else if (model == "coxph") {
 		if (is.null(Bspline_Z)) {
@@ -262,8 +261,9 @@ smle <- function (Y=NULL,
 	}
     #### analysis #################################################################################################
 	###############################################################################################################
-	
-	
+
+# browser()
+
 
     ###############################################################################################################
     #### return results ###########################################################################################
@@ -272,7 +272,7 @@ smle <- function (Y=NULL,
 	res_coefficients[,2] = diag(res$cov_theta)[rowmap]
 	res_coefficients[which(res_coefficients[,2] <= 0),2] = NA
 	res_coefficients[which(res_coefficients[,2] > 0),2] = sqrt(res_coefficients[which(res_coefficients[,2] > 0),2])
-	
+
 	id_NA = which(is.na(res_coefficients[,1]) | is.na(res_coefficients[,2]))
 	if (length(id_NA) > 0)
 	{
@@ -284,7 +284,9 @@ smle <- function (Y=NULL,
 	    res_coefficients[,3] = res_coefficients[,1]/res_coefficients[,2]
 	    res_coefficients[,4] = 1-pchisq(res_coefficients[,3]^2, df=1)
 	}
-	res_final = list(coefficients=res_coefficients, converge=!res$flag_nonconvergence, converge2=!res$flag_nonconvergence_cov)
+	res_final = list(coefficients=res_coefficients, 
+		converge=!res$flag_nonconvergence, 
+		converge_cov=!res$flag_nonconvergence_cov)
 	res_final
     #### return results ###########################################################################################
     ###############################################################################################################

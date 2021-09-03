@@ -304,7 +304,10 @@ smle_lmm <- function (Y=NULL, Time=NULL, ID=NULL, X=NULL, Z=NULL, ZT=NULL, Bspli
 	    res_coefficients[,3] = res_coefficients[,1]/res_coefficients[,2]
 	    res_coefficients[,4] = 1-pchisq(res_coefficients[,3]^2, df=1)
 	}
-	res_final = list(coefficients=res_coefficients, vc=res_vc, converge=!res$flag_nonconvergence, converge2=!res$flag_nonconvergence_cov)
+	res_final = list(coefficients=res_coefficients, 
+		vc=res_vc, 
+		converge=!res$flag_nonconvergence, 
+		converge_cov=!res$flag_nonconvergence_cov)
 	res_final
     #### return results ###########################################################################################
     ###############################################################################################################
