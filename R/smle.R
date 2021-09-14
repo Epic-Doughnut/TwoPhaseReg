@@ -247,7 +247,7 @@ smle <- function (Y=NULL, Delta=NULL, X=NULL, Z=NULL, Bspline_Z=NULL, data=NULL,
 			if (is.null(Z)) {
 				res = .Call("TwoPhase_MLE0_noZW_coxph", Y_vec, Delta_vec, X_mat, MAX_ITER, TOL, noSE, package="TwoPhaseReg")
 			} else {
-				res = .Call("TwoPhase_MLE0_coxph", Y_vec, Delta_vec, X_mat, Z_mat, MAX_ITER, TOL, noSE, package="TwoPhaseReg")
+				res = TwoPhase_MLE0_coxph(Y_vec, Delta_vec, X_mat, Z_mat, MAX_ITER, TOL, noSE)
 			}
 		} else {
 		    # if (is.null(L))
@@ -256,7 +256,7 @@ smle <- function (Y=NULL, Delta=NULL, X=NULL, Z=NULL, Bspline_Z=NULL, data=NULL,
 		    # } else {
 		        # res = .Call("TwoPhase_GeneralSpline_coxph_LeftTrunc", Y_vec, L_vec, Delta_vec, X_mat, Z_mat, Bspline_Z_mat, hn, MAX_ITER, TOL, noSE, package="TwoPhaseReg")
 		    # }
-			res = .Call("TwoPhase_GeneralSpline_coxph", Y_vec, Delta_vec, X_mat, Z_mat, Bspline_Z_mat, hn, MAX_ITER, TOL, noSE, package="TwoPhaseReg")
+			res = TwoPhase_GeneralSpline_coxph(Y_vec, Delta_vec, X_mat, Z_mat, Bspline_Z_mat, hn, MAX_ITER, TOL, noSE)
 		}
 	}
     #### analysis #################################################################################################

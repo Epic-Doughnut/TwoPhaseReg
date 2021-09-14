@@ -57,7 +57,7 @@ int Num_Uni_Matrix_Row (const MatrixXd& mat, const VectorXi& index) ;
  */
 void Create_Uni_Matrix_Row (const MatrixXd& mat, const VectorXi& index, MatrixXd& uni_mat, VectorXi& ind, VectorXi& N_uni) ;
 
-void indexx_Vector (const VectorXd& vec, VectorXi& indx) ;
+VectorXi indexx_Vector (const VectorXd& vec) ;
 
 /***************************************************************************************
  Find the number of unique events, and return it as "n_event".

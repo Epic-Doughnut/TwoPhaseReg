@@ -62,6 +62,7 @@ double WaldLogisticGeneralSplineProfile (MatrixXd& pB, RowVectorXd& p_col_sum, V
 		p.col(j) = p_static.col(j)/p_col_sum(j);
 	}
 	p0 = p;
+	MatrixXd Bspline_Mat(n_minus_n2, pB.cols());
 	/**** parameter initialization *****************************************************************************************************************/
 
 	for (iter=0; iter<MAX_ITER; ++iter)
@@ -73,19 +74,23 @@ double WaldLogisticGeneralSplineProfile (MatrixXd& pB, RowVectorXd& p_col_sum, V
 		/**** E-step *******************************************************************************************************************************/
 
 		/**** update pB ****************************************************************************************************************************/
-		pB = Bspline_uni*p.transpose();
+		pB = Bspline_uni * p.transpose();
 		/**** update pB ****************************************************************************************************************************/
 		time = tic();
 		/**** update q, q_row_sum ******************************************************************************************************************/
-		for (int i=0; i<n_minus_n2; ++i)
+		for (int i = 0; i < n_minus_n2; ++i)
 		{
-			// for (int k=0; k<m; ++k)
-			// {
-			// 	q(i,k) = P_theta(i,k) * pB(Bspline_uni_ind(i+n2), k);
-			// }
-			q.row(i) = P_theta.row(i) * pB.row(Bspline_uni_ind(i + n2));
-			Rcpp::checkUserInterrupt();
+			Bspline_Mat.row(i) = pB.row(Bspline_uni_ind(i + n2));
 		}
+		q = P_theta.array() * Bspline_Mat.array();
+		// for (int i=0; i<n_minus_n2; ++i)
+		// {
+		// 	// for (int k=0; k<m; ++k)
+		// 	// {
+		// 	// 	q(i,k) = P_theta(i,k) * pB(Bspline_uni_ind(i+n2), k);
+		// 	// }
+		// }
+		// Rcout << q.cols() << endl << m << endl << P_theta.cols() << endl << pB.cols() << endl;
 
 		q_row_sum = q.rowwise().sum();
 		for (int i=0; i<n_minus_n2; ++i)
@@ -101,14 +106,10 @@ double WaldLogisticGeneralSplineProfile (MatrixXd& pB, RowVectorXd& p_col_sum, V
 		time = tic();
 		/**** update p *****************************************************************************************************************************/
 		p.setZero();
-		// Each row of P_theta is divided by q_row_sum[row]
-		const MatrixXd pthetaOverQ = P_theta.array().colwise() / q_row_sum.array(); 
 
-		MatrixXd Bspline_Mat(n_minus_n2, Bspline_uni.cols());
-		for (int i = 0; i < n_minus_n2; ++i)
-		{
-			Bspline_Mat.row(i) = Bspline_uni.row(Bspline_uni_ind(i + n2));
-		}
+		// Each row of P_theta is divided by q_row_sum[row]
+		const MatrixXd pthetaOverQ = P_theta.array().colwise() / q_row_sum.array();
+
 		for (int i=0; i<n_minus_n2; ++i)
 		{
 			// for (int k=0; k<m; ++k)
@@ -123,7 +124,8 @@ double WaldLogisticGeneralSplineProfile (MatrixXd& pB, RowVectorXd& p_col_sum, V
 			Rcpp::checkUserInterrupt();
 
 		}
-		p = p.array()*p0.array();
+
+		p = p.array() * p0.array();
 		p += p_static;
 		p_col_sum = p.colwise().sum();
 		for (int j=0; j<s; ++j)
@@ -185,14 +187,17 @@ double WaldLogisticGeneralSplineProfile (MatrixXd& pB, RowVectorXd& p_col_sum, V
 
 		pB = Bspline_uni*p.transpose();;
 
-		for (int i=0; i<n_minus_n2; ++i)
-		{
-			for (int k=0; k<m; ++k)
-			{
-				q(i,k) = P_theta(i,k)*pB(Bspline_uni_ind(i+n2),k);
-			}
-			Rcpp::checkUserInterrupt();
-		}
+		// for (int i=0; i<n_minus_n2; ++i)
+		// {	//problem
+			// for (int k=0; k<m; ++k)
+			// {
+			// 	q(i,k) = P_theta(i,k)*pB(Bspline_uni_ind(i+n2),k);
+			// }
+			// q.row(i) = P_theta.row(i) * pB.row(Bspline_uni_ind(i+n2));
+			// Rcpp::checkUserInterrupt();
+		// }
+		// Reusing Bspline_Mat
+		q = P_theta.array() * Bspline_Mat.array();
 		q_row_sum = q.rowwise().sum();
 
 		loglik += q_row_sum.array().log().sum();
@@ -252,11 +257,9 @@ List TwoPhase_GeneralSpline_logistic (const VectorXd& Y, const MatrixXd& X, cons
 	// X_uni_ind(n2): row index of rows of X in X_uni
 	// X_uni(m, X_nc): distinct rows of X
 	// X_uni_n(m): count of appearances of each distinct row of X
-	int m;
-	VectorXi X_index(n2);
+	VectorXi X_index = indexx_Matrix_Row(X);
+	int m = Num_Uni_Matrix_Row(X, X_index);
 	VectorXi X_uni_ind(n2);
-	X_index = indexx_Matrix_Row(X);
-	m = Num_Uni_Matrix_Row(X, X_index);
 	MatrixXd X_uni(m, X_nc);
 	VectorXi X_uni_n(m);
 	Create_Uni_Matrix_Row(X, X_index, X_uni, X_uni_ind, X_uni_n);
@@ -271,11 +274,9 @@ List TwoPhase_GeneralSpline_logistic (const VectorXd& Y, const MatrixXd& X, cons
 	// Bspline_uni_ind(n): row index of rows of Bspline in Bspline_uni
 	// Bspline_uni(m_B, s): distinct rows of Bspline
 	// Bspline_uni_n(m_B): count of appearances of each distinct row of Bspline
-	int m_B;
-	VectorXi Bspline_index(n);
 	VectorXi Bspline_uni_ind(n);
-	Bspline_index = indexx_Matrix_Row(Bspline);
-	m_B = Num_Uni_Matrix_Row(Bspline, Bspline_index);
+	VectorXi Bspline_index = indexx_Matrix_Row(Bspline);
+	int m_B = Num_Uni_Matrix_Row(Bspline, Bspline_index);
 	MatrixXd Bspline_uni(m_B, s);
 	VectorXi Bspline_uni_n(m_B);
 	Create_Uni_Matrix_Row(Bspline, Bspline_index, Bspline_uni, Bspline_uni_ind, Bspline_uni_n);
@@ -289,7 +290,7 @@ List TwoPhase_GeneralSpline_logistic (const VectorXd& Y, const MatrixXd& X, cons
 	// p
 	MatrixXd p_static(m, s);
 	p_static.setZero();
-	for (int i=0; i<n2; i++)
+	for (int i=0; i<n2; ++i)
 	{
 		p_static.row(X_uni_ind(i)) += Bspline.row(i);
 	}
@@ -348,7 +349,7 @@ List TwoPhase_GeneralSpline_logistic (const VectorXd& Y, const MatrixXd& X, cons
 	theta0.setZero();
 
 	p_col_sum = p_static.colwise().sum();
-	for (int j=0; j<s; j++)
+	for (int j=0; j<s; ++j)
 	{
 		p.col(j) = p_static.col(j)/p_col_sum(j);
 	}
@@ -358,7 +359,7 @@ List TwoPhase_GeneralSpline_logistic (const VectorXd& Y, const MatrixXd& X, cons
 	flag_nonconvergence_cov = false;
 	/**** parameter initialization *****************************************************************************************************************/
 
-	for (iter=0; iter<MAX_ITER; iter++)
+	for (iter=0; iter<MAX_ITER; ++iter)
 	{
 		// /* RT test block */
 		//	time(&t1);
@@ -371,6 +372,7 @@ List TwoPhase_GeneralSpline_logistic (const VectorXd& Y, const MatrixXd& X, cons
 		/**** update pB ****************************************************************************************************************************/
 
 		/**** update P_theta ***********************************************************************************************************************/
+		auto time = tic();
 		ZW_theta = ZW*theta.tail(ZW_nc);
 		X_uni_theta = X_uni*theta.head(X_nc);
 		for (int i=0; i<n_minus_n2; i++)
@@ -402,9 +404,12 @@ List TwoPhase_GeneralSpline_logistic (const VectorXd& Y, const MatrixXd& X, cons
 				stop(error_message.str());
 			}
 		}
+		Rcout << "update p theta " << chrono::duration<double>(tic() - time).count() << endl;
+
 		/**** update P_theta ***********************************************************************************************************************/
 
 		/**** update q, q_row_sum ******************************************************************************************************************/
+		time = tic();
 		for (int i=0; i<n_minus_n2; i++)
 		{
 			for (int k=0; k<m; k++)
@@ -417,6 +422,7 @@ List TwoPhase_GeneralSpline_logistic (const VectorXd& Y, const MatrixXd& X, cons
 		{
 			q.row(i) /= q_row_sum(i);
 		}
+		Rcout << "update q's " << chrono::duration<double>(tic() - time).count() << endl;
 		/**** update q, q_row_sum ******************************************************************************************************************/
 
 		/**** E-step *******************************************************************************************************************************/
@@ -425,6 +431,7 @@ List TwoPhase_GeneralSpline_logistic (const VectorXd& Y, const MatrixXd& X, cons
 		/**** M-step *******************************************************************************************************************************/
 
 		/**** update theta *************************************************************************************************************************/
+		time = tic();
 		for (int i=0; i<n2; i++)
 		{
 			e_X_theta(i) = ZW_theta(i)+X_uni_theta(X_uni_ind(i));
@@ -460,9 +467,11 @@ List TwoPhase_GeneralSpline_logistic (const VectorXd& Y, const MatrixXd& X, cons
 
 		theta = LS_XtX.selfadjointView<Eigen::Upper>().ldlt().solve(LS_XtY);
 		theta += theta0;
+		Rcout << "update theta " << chrono::duration<double>(tic() - time).count() << endl;
 		/**** update theta *************************************************************************************************************************/
 
 		/**** update p *****************************************************************************************************************************/
+		time = tic();
 		p.setZero();
 		for (int i=0; i<n_minus_n2; i++)
 		{
@@ -481,6 +490,7 @@ List TwoPhase_GeneralSpline_logistic (const VectorXd& Y, const MatrixXd& X, cons
 		{
 			p.col(j) /= p_col_sum(j);
 		}
+		Rcout << "update p" << chrono::duration<double>(tic() - time).count() << endl;
 		/**** update p *****************************************************************************************************************************/
 
 		/**** M-step *******************************************************************************************************************************/
@@ -543,15 +553,16 @@ List TwoPhase_GeneralSpline_logistic (const VectorXd& Y, const MatrixXd& X, cons
 		{
 			flag_nonconvergence_cov = true;
 		}
-		for (int i=0; i<ncov; i++)
-		{
-			for (int j=i; j<ncov; j++)
-			{
-				profile_mat(i,j) = loglik;
-			}
-		}
+		// for (int i=0; i<ncov; i++)
+		// {
+		// 	for (int j=i; j<ncov; j++)
+		// 	{
+		// 		profile_mat(i,j) = loglik;
+		// 	}
+		// }
+		profile_mat.triangularView<Upper>().setConstant(loglik);
 
-		for (int i=0; i<ncov; i++)
+		for (int i=0; i<ncov; ++i)
 		{
 			theta0 = theta;
 			theta0(i) += hn;
@@ -563,9 +574,9 @@ List TwoPhase_GeneralSpline_logistic (const VectorXd& Y, const MatrixXd& X, cons
 			}
 		}
 
-		for (int i=0; i<ncov; i++)
+		for (int i=0; i<ncov; ++i)
 		{
-			for (int j=i; j<ncov; j++)
+			for (int j=i; j<ncov; ++j)
 			{
 				theta0 = theta;
 				theta0(i) += hn;
@@ -587,16 +598,19 @@ List TwoPhase_GeneralSpline_logistic (const VectorXd& Y, const MatrixXd& X, cons
 		}
 		else
 		{
-			for (int i=0; i<ncov; i++)
-			{
-				for (int j=i+1; j<ncov; j++)
-				{
-					profile_mat(j,i) = profile_mat(i,j);
-				}
-			}
-			profile_mat /= hn*hn;
+			// for (int i=0; i<ncov; i++)
+			// {
+			// 	for (int j=i+1; j<ncov; j++)
+			// 	{
+			// 		profile_mat(j,i) = profile_mat(i,j);
+			// 	}
+			// }
+			profile_mat = profile_mat.selfadjointView<Upper>();
+
+			profile_mat /= hn * hn;
 			profile_mat = -profile_mat;
-			cov_theta = profile_mat.selfadjointView<Eigen::Upper>().ldlt().solve(MatrixXd::Identity(ncov, ncov));
+			cov_theta = profile_mat.selfadjointView<Upper>().ldlt().solve(MatrixXd::Identity(ncov, ncov));
+			// TODO: is this the correct value for Identity matrix? In linear, it's ncov+1
 		}
 	}
 	/**** variance estimation **********************************************************************************************************************/
@@ -641,11 +655,11 @@ MatrixXd WaldLogisticVarianceMLE0 (const MatrixXd& LS_XtX, const VectorXd& p, co
 	for (int i = 0, idx = n2; i < n_minus_n2; ++i, ++idx)
 	{
 		yMinusLogi.row(i).setConstant(Y(idx));
-	  yMinusLogi.row(i) -= logi_X_uni_theta.row(i);
+	  	yMinusLogi.row(i) -= logi_X_uni_theta.row(i);
 	}
 
 	for (int i = 0, idx = n2; i < n_minus_n2; ++i, ++idx)
-	// for (int i = 0, idx = n2; i < 20; ++i, ++idx)
+	// for (int i = 0, idx = n2; i < 100; ++i, ++idx)
 	{
 		auto outer = tic();
 		// const MatrixXd oldQ = Q;
@@ -715,11 +729,9 @@ List TwoPhase_MLE0_logistic (const VectorXd& Y, const MatrixXd& X, const MatrixX
 	// X_uni_ind(n2): row index of rows of X in X_uni
 	// X_uni(m, X_nc): distinct rows of X
 	// X_uni_n(m): count of appearances of each distinct row of X
-	int m;
-	VectorXi X_index(n2);
+	VectorXi X_index = indexx_Matrix_Row(X);
+	int m = Num_Uni_Matrix_Row(X, X_index);
 	VectorXi X_uni_ind(n2);
-	X_index = indexx_Matrix_Row(X);
-	m = Num_Uni_Matrix_Row(X, X_index);
 	MatrixXd X_uni(m, X_nc);
 	VectorXi X_uni_n(m);
 	Create_Uni_Matrix_Row(X, X_index, X_uni, X_uni_ind, X_uni_n);
@@ -775,16 +787,16 @@ List TwoPhase_MLE0_logistic (const VectorXd& Y, const MatrixXd& X, const MatrixX
 	/**** parameter initialization *****************************************************************************************************************/
 	theta.setZero();
 	theta0.setZero();
-	for (int k=0; k<m; k++)
+	for (int k=0; k<m; ++k)
 	{
-		p(k) = (X_uni_n(k)+0.)/(n2+0.);
+		p(k) = (double)X_uni_n(k) / (double)n2 ;
 	}
 	p0 = p;
 	flag_nonconvergence = false;
 	flag_nonconvergence_cov = false;
 	/**** parameter initialization *****************************************************************************************************************/
 
-	for (iter=0; iter<MAX_ITER; iter++)
+	for (iter=0; iter<MAX_ITER; ++iter)
 	{
 		// /* RT test block */
 		//	time(&t1);
@@ -795,18 +807,18 @@ List TwoPhase_MLE0_logistic (const VectorXd& Y, const MatrixXd& X, const MatrixX
 		/**** update P_theta ***********************************************************************************************************************/
 		ZW_theta = ZW*theta.tail(ZW_nc);
 		X_uni_theta = X_uni*theta.head(X_nc);
-		for (int i=0; i<n_minus_n2; i++)
+		for (int i=0; i<n_minus_n2; ++i)
 		{
-			for (int k=0; k<m; k++)
+			for (int k=0; k<m; ++k)
 			{
-				e_X_uni_theta(i,k) = ZW_theta(i+n2)+X_uni_theta(k);
+				e_X_uni_theta(i,k) = ZW_theta(i+n2) + X_uni_theta(k);
 			}
 		}
 		e_X_uni_theta = e_X_uni_theta.array().exp();
         logi_X_uni_theta = e_X_uni_theta.array()/(e_X_uni_theta.array()+1.);
         logi2_X_uni_theta = logi_X_uni_theta.array()/(e_X_uni_theta.array()+1.);
 
-		for (int i=0; i<n_minus_n2; i++)
+		for (int i=0; i<n_minus_n2; ++i)
 		{
 			idx = i+n2;
 			if (Y(idx) == 1.)
@@ -828,13 +840,15 @@ List TwoPhase_MLE0_logistic (const VectorXd& Y, const MatrixXd& X, const MatrixX
 		Rcout << "update p theta "  << chrono::duration<double> (tic() - time).count() << endl;
 		time = tic();
 		/**** update q, q_row_sum ******************************************************************************************************************/
-		for (int i=0; i<n_minus_n2; i++)
+		for (int i=0; i<n_minus_n2; ++i)
 		{
-			for (int k=0; k<m; k++)
+			for (int k=0; k<m; ++k)
 			{
 				q(i,k) = P_theta(i,k)*p(k);
 			}
+			// q.row(i) = P_theta.row(i).array() * p.array();
 		}
+
 		q_row_sum = q.rowwise().sum();
 		for (int i=0; i<n_minus_n2; i++)
 		{
@@ -859,19 +873,22 @@ List TwoPhase_MLE0_logistic (const VectorXd& Y, const MatrixXd& X, const MatrixX
 
 		LS_XtX.setZero();
 		LS_XtY.setZero();
+		const VectorXd yMinusLogi = Y - logi_X_theta;
 		for (int i=0; i<n2; i++)
 		{
-			LS_XtY.head(X_nc).noalias() += X.row(i).transpose()*(Y(i)-logi_X_theta(i));
-			LS_XtY.tail(ZW_nc).noalias() += ZW.row(i).transpose()*(Y(i)-logi_X_theta(i));
+			// LS_XtY.head(X_nc).noalias() += X.row(i).transpose()*(Y(i)-logi_X_theta(i));
+			// LS_XtY.tail(ZW_nc).noalias() += ZW.row(i).transpose()*(Y(i)-logi_X_theta(i));
+			LS_XtY.head(X_nc).noalias() += X.row(i).transpose() * yMinusLogi(i);
+			LS_XtY.tail(ZW_nc).noalias() += ZW.row(i).transpose()* yMinusLogi(i);
 
 			LS_XtX.topLeftCorner(X_nc,X_nc).noalias() += (X.row(i).transpose())*X.row(i)*logi2_X_theta(i);
 			LS_XtX.topRightCorner(X_nc,ZW_nc).noalias() += (X.row(i).transpose())*ZW.row(i)*logi2_X_theta(i);
 			LS_XtX.bottomRightCorner(ZW_nc,ZW_nc).noalias() += (ZW.row(i).transpose())*ZW.row(i)*logi2_X_theta(i);
 		}
-		for (int i=0; i<n_minus_n2; i++)
+		for (int i=0; i<n_minus_n2; ++i)
 		{
 			idx = i+n2;
-			for (int k=0; k<m; k++)
+			for (int k=0; k<m; ++k)
 			{
 				LS_XtY.head(X_nc).noalias() += q(i,k)*X_uni.row(k).transpose()*(Y(idx)-logi_X_uni_theta(i,k));
 				LS_XtY.tail(ZW_nc).noalias() += q(i,k)*ZW.row(idx).transpose()*(Y(idx)-logi_X_uni_theta(i,k));
@@ -888,7 +905,7 @@ List TwoPhase_MLE0_logistic (const VectorXd& Y, const MatrixXd& X, const MatrixX
 		Rcout << "update theta "  << chrono::duration<double> (tic() - time).count() << endl;
 		time = tic();
 		/**** update p *****************************************************************************************************************************/
-		for (int k=0; k<m; k++)
+		for (int k=0; k<m; ++k)
 		{
 			p(k) = X_uni_n(k)+0.;
 		}

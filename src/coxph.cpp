@@ -269,19 +269,21 @@ double WaldCoxphGeneralSplineProfile (MatrixXd pB, RowVectorXd p_col_sum, Vector
 	}
 } // WaldCoxphGeneralSplineProfile
 
-RcppExport SEXP TwoPhase_GeneralSpline_coxph (SEXP Y_R, SEXP Delta_R, SEXP X_R, SEXP ZW_R, SEXP Bspline_R, SEXP hn_R, SEXP MAX_ITER_R, SEXP TOL_R, SEXP noSE_R)
+// [[Rcpp::export]]
+List TwoPhase_GeneralSpline_coxph (const VectorXd& Y, const VectorXi& Delta, const MatrixXd& X, const MatrixXd& ZW,
+ const MatrixXd& Bspline, const double& hn, const int& MAX_ITER, const double& TOL, const int& noSE)
 {
 	/*#############################################################################################################################################*/
 	/**** pass arguments from R to cpp *************************************************************************************************************/
-	const MapVecd Y(as<MapVecd>(Y_R));
-	const MapVeci Delta(as<MapVeci>(Delta_R));
-	const MapMatd X(as<MapMatd>(X_R));
-	const MapMatd ZW(as<MapMatd>(ZW_R));
-	const MapMatd Bspline(as<MapMatd>(Bspline_R));
-	const double hn = NumericVector(hn_R)[0];
-	const int MAX_ITER = IntegerVector(MAX_ITER_R)[0];
-	const double TOL = NumericVector(TOL_R)[0];
-	const int noSE = IntegerVector(noSE_R)[0];
+	// const MapVecd Y(as<MapVecd>(Y_R));
+	// const MapVeci Delta(as<MapVeci>(Delta_R));
+	// const MapMatd X(as<MapMatd>(X_R));
+	// const MapMatd ZW(as<MapMatd>(ZW_R));
+	// const MapMatd Bspline(as<MapMatd>(Bspline_R));
+	// const double hn = NumericVector(hn_R)[0];
+	// const int MAX_ITER = IntegerVector(MAX_ITER_R)[0];
+	// const double TOL = NumericVector(TOL_R)[0];
+	// const int noSE = IntegerVector(noSE_R)[0];
 	/**** pass arguments from R to cpp *************************************************************************************************************/
 	/*#############################################################################################################################################*/
 
@@ -814,17 +816,18 @@ RcppExport SEXP TwoPhase_GeneralSpline_coxph (SEXP Y_R, SEXP Delta_R, SEXP X_R, 
 	/*#############################################################################################################################################*/
 } // TwoPhase_GeneralSpline_coxph
 
-RcppExport SEXP TwoPhase_MLE0_coxph (SEXP Y_R, SEXP Delta_R, SEXP X_R, SEXP ZW_R, SEXP MAX_ITER_R, SEXP TOL_R, SEXP noSE_R)
+// [[Rcpp::export]]
+List TwoPhase_MLE0_coxph (const VectorXd& Y, const VectorXi& Delta, const MatrixXd& X, const MatrixXd& ZW, const int& MAX_ITER, const double& TOL, const int& noSE)
 {
 	/*#############################################################################################################################################*/
 	/**** pass arguments from R to cpp *************************************************************************************************************/
-	const MapVecd Y(as<MapVecd>(Y_R));
-	const MapVeci Delta(as<MapVeci>(Delta_R));
-	const MapMatd X(as<MapMatd>(X_R));
-	const MapMatd ZW(as<MapMatd>(ZW_R));
-	const int MAX_ITER = IntegerVector(MAX_ITER_R)[0];
-	const double TOL = NumericVector(TOL_R)[0];
-	const int noSE = IntegerVector(noSE_R)[0];
+	// const MapVecd Y(as<MapVecd>(Y_R));
+	// const MapVeci Delta(as<MapVeci>(Delta_R));
+	// const MapMatd X(as<MapMatd>(X_R));
+	// const MapMatd ZW(as<MapMatd>(ZW_R));
+	// const int MAX_ITER = IntegerVector(MAX_ITER_R)[0];
+	// const double TOL = NumericVector(TOL_R)[0];
+	// const int noSE = IntegerVector(noSE_R)[0];
 	/**** pass arguments from R to cpp *************************************************************************************************************/
 	/*#############################################################################################################################################*/
 
