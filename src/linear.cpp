@@ -14,39 +14,36 @@ typedef Map<VectorXd> MapVecd;
 typedef Map<VectorXi> MapVeci;
 typedef Map<MatrixXd> MapMatd;
 
-
 double WaldLinearGeneralSplineProfile (MatrixXd& pB, RowVectorXd& p_col_sum,
 	VectorXd& q_row_sum, MatrixXd& p, MatrixXd& p0, MatrixXd& P_theta, MatrixXd& q, VectorXd& resi_n, MatrixXd& logp,
 	const VectorXd& theta, const VectorXd& Y, const MatrixXd& X, const MatrixXd& Bspline_uni,
 	const MatrixXd& ZW, const MatrixXd& X_uni, const VectorXi& X_uni_ind,
 	const VectorXi& Bspline_uni_ind, const MatrixXd& p_static, const double& sigma_sq, const int& n, const int& n2, const int& m,
-	const int& s, const int& n_minus_n2, const int& X_nc, const int& ZW_nc, const int& MAX_ITER, const double& TOL)
+	const int& s, const int& n_minus_n2, const int& X_nc, const int& ZW_nc, const int& MAX_ITER, const double& TOL) 
 {
-	auto start = tic();
-
-	/**** temporary variables **********************************************************************************************************************/
+	/**** temporary variables **********************************************************************************************************************/	
+	double tol;
 	int iter;
 	/* test code */
 	// time_t t1, t2;
 	/* test code end */
 	/**** temporary variables **********************************************************************************************************************/
-	auto time1 = tic();
+	
 	/**** update P_theta ***************************************************************************************************************************/
-	// P_theta.col(0) = Y.tail(n_minus_n2);
-	// P_theta.col(0).noalias() -= ZW.bottomRows(n_minus_n2)*theta.tail(ZW_nc);
-	P_theta.col(0) = Y.tail(n_minus_n2) - ZW.bottomRows(n_minus_n2) * theta.tail(ZW_nc);
+	P_theta.col(0) = Y.tail(n_minus_n2);
+	P_theta.col(0).noalias() -= ZW.bottomRows(n_minus_n2)*theta.tail(ZW_nc);
+	// P_theta.col(0) = Y.tail(n_minus_n2) - ZW.bottomRows(n_minus_n2) * theta.tail(ZW_nc);
 
-	// const VectorXd pThetaColZero = P_theta.col(0);
+	const VectorXd pThetaColZero = P_theta.col(0);
 	for (int k = 0; k < m; ++k)
 	{
-		P_theta.col(k).noalias() = P_theta.col(0) - VectorXd::Constant(n_minus_n2, X_uni(k, 0) * theta(0));
+		P_theta.col(k).noalias() = pThetaColZero - VectorXd::Constant(n_minus_n2, X_uni(k, 0) * theta(0));
 	}
 	P_theta = P_theta.array().square();
 	P_theta /= -2.*sigma_sq;
 	P_theta = P_theta.array().exp();
 	/**** update P_theta ***************************************************************************************************************************/
-	Rcout << "update p_theta " << chrono::duration<double> (tic() - time1).count() << endl;
-	time1 = tic();
+		
 	/**** parameter initialization *****************************************************************************************************************/
 	p_col_sum = p_static.colwise().sum();
 	for (int j = 0; j < s; ++j)
@@ -54,65 +51,57 @@ double WaldLinearGeneralSplineProfile (MatrixXd& pB, RowVectorXd& p_col_sum,
 		p.col(j) = p_static.col(j) / p_col_sum(j);
 	}
 	p0 = p;
-	/**** parameter initialization *****************************************************************************************************************/
-	Rcout << "parameter initialization " << chrono::duration<double> (tic() - time1).count() << endl;
+	MatrixXd Bspline_Mat(n_minus_n2, m);
+ 	MatrixXd pthetaOverQ(P_theta.rows(), P_theta.cols());
 
-	for (iter = 0; iter < MAX_ITER; ++iter)
+	/**** parameter initialization *****************************************************************************************************************/
+	
+	for (iter=0; iter<MAX_ITER; ++iter) 
 	{
 		/* test code */
+		auto time = tic();
 		// time(&t1);
 		/* test code end */
-
+		
 		/**** E-step *******************************************************************************************************************************/
-
+		
 		/**** update pB ****************************************************************************************************************************/
-		pB = Bspline_uni * p.transpose();
+		pB = Bspline_uni*p.transpose();
 		/**** update pB ****************************************************************************************************************************/
-		time1 = tic();
+				
 		/**** update q, q_row_sum ******************************************************************************************************************/
+				// Construct Bspline matrix
 		for (int i = 0; i < n_minus_n2; ++i)
 		{
-			for (int k = 0; k < m; ++k)
-			{
-				q(i,k) = P_theta(i,k) * pB(Bspline_uni_ind(i + n2), k);
-			}
+			Bspline_Mat.row(i) = pB.row(Bspline_uni_ind(i + n2));
 		}
-
-		// q = P_theta * pB.row(Bspline_uni_ind);
-
-		q_row_sum = q.rowwise().sum();
-		for (int i=0; i<n_minus_n2; ++i)
+		q = P_theta.array() * Bspline_Mat.array();
+		// for (int i = 0; i < n_minus_n2; ++i)
+		// {
+		// 	for (int k = 0; k < m; ++k)
+		// 	{
+		// 		// Rcout << i << ", " << k << endl;
+		// 		q(i,k) = P_theta(i,k) * pB(Bspline_uni_ind(i + n2), k);
+		// 	}
+		// }
+		
+		q_row_sum = q.rowwise().sum();		
+		for (int i=0; i<n_minus_n2; ++i) 
 		{
 			q.row(i) /= q_row_sum(i);
 		}
 		/**** update q, q_row_sum ******************************************************************************************************************/
-		Rcout << "update q,q_row_sum " << chrono::duration<double> (tic() - time1).count() << endl;
-
+		
 		/**** E-step *******************************************************************************************************************************/
-
-
+			
+		
 		/**** M-step *******************************************************************************************************************************/
-		time1 = tic();
+		
 		/**** update p *****************************************************************************************************************************/
 		p.setZero();
-
-		// Each row of P_theta is divided by q_row_sum[row]
-		const MatrixXd pthetaOverQ = P_theta.array().colwise() / q_row_sum.array(); 
-
-		// n_minus_n2 1400
-		// m 600
-		// P_theta 1400 x 600
-		// pthetaOverQ 1400 x 600
-		// Bspline_uni 2000 x 64
-		// Bspline_Mat 1400 x 64
-		// p 600 x 64
-		// Construct Bspline matrix
-		MatrixXd Bspline_Mat(n_minus_n2, Bspline_uni.cols());
-		for (int i = 0; i < n_minus_n2; ++i)
-		{
-			Bspline_Mat.row(i) = Bspline_uni.row(Bspline_uni_ind(i + n2));
-		}
-
+				// Each row of P_theta is divided by q_row_sum[row]
+		pthetaOverQ = P_theta.array().colwise() / q_row_sum.array();
+		
 		for (int i = 0; i < n_minus_n2; ++i)
 		{
 			// for (int k = 0; k < m; ++k)
@@ -129,55 +118,53 @@ double WaldLinearGeneralSplineProfile (MatrixXd& pB, RowVectorXd& p_col_sum,
 			// Creates a matrix of size p made of every element of Bspline_mat * every element of pthetaOverQ
 			// ~10 sec speedup
 			p += pthetaOverQ.row(i).transpose() * Bspline_uni.row(Bspline_uni_ind(i + n2));
-		}
-
-
-		p = p.array() * p0.array();
+		}	
+		p = p.array()*p0.array();
 		p += p_static;
-		// p_col_sum = p.colwise().sum();
-		for (int j = 0; j < s; ++j)
+		p_col_sum = p.colwise().sum();
+		for (int j=0; j<s; ++j) 
 		{
-			// p.col(j) /= p_col_sum(j);
-			p.col(j) /= p.col(j).sum();
+			p.col(j) /= p_col_sum(j);
 		}
 		/**** update p *****************************************************************************************************************************/
-		Rcout << "update p " << chrono::duration<double> (tic() - time1).count() << endl;
-
+		
 		/**** M-step *******************************************************************************************************************************/
-
-		// time1 = tic();
-		// calculate the sum of absolute differences between estimates in the current and previous iterations 
+				
+		/**** calculate the sum of absolute differences between estimates in the current and previous iterations ***********************************/
+		tol = (p-p0).array().abs().sum();
+		/**** calculate the sum of absolute differences between estimates in the current and previous iterations ***********************************/
+								
+		/**** update parameters ********************************************************************************************************************/
+		p0 = p;
+		/**** update parameters ********************************************************************************************************************/
+		
 		/**** check convergence ********************************************************************************************************************/
-		if ((p-p0).array().abs().sum() < TOL)
+		if (tol < TOL) 
 		{
 			break;
 		}
 		/**** check convergence ********************************************************************************************************************/
-		// Rcout << "tol convergence " << chrono::duration<double> (tic() - time1).count() << endl;
-
-		/**** update parameters ********************************************************************************************************************/
-		p0 = p;
-		/**** update parameters ********************************************************************************************************************/
-
+		
 		/* test code */
 		// time(&t2);
 		// Rcpp::Rcout << iter << '\t' << difftime(t2, t1) << '\t' << tol << endl;
+		Rcout << iter << '\t' << chrono::duration<double>(tic() - time).count() << '\t' << tol << endl;
 		/* test code end */
 	}
-
-	if (iter == MAX_ITER)
+	
+	if (iter == MAX_ITER) 
 	{
 		return -999.;
-	}
-	else
+	} 
+	else 
 	{
 		/**** calculate the likelihood *************************************************************************************************************/
 		double tmp, loglik;
-		time1 = tic();
+		
 		logp = p.array().log();
-		for (int k = 0; k < m; ++k)
+		for (int k=0; k<m; ++k)
 		{
-			for (int j = 0 ; j < s; ++j)
+			for (int j=0; j<s; ++j)
 			{
 				if (p(k,j) <= 0.)
 				{
@@ -186,40 +173,44 @@ double WaldLinearGeneralSplineProfile (MatrixXd& pB, RowVectorXd& p_col_sum,
 			}
 		}
 		pB = Bspline_uni*logp.transpose();
-		Rcout << "logp " << chrono::duration<double> (tic() - time1).count() << endl;
-		time1 = tic();
+		
 		loglik = 0.;
-		for (int i = 0; i < n2; ++i) {
-			loglik += pB(Bspline_uni_ind(i), X_uni_ind(i));
+		for (int i=0; i<n2; ++i) 
+		{
+			loglik += pB(Bspline_uni_ind(i),X_uni_ind(i));
 		}
-
+		
 		pB = Bspline_uni*p.transpose();
-
+		Bspline_Mat.setZero();
 		for (int i = 0; i < n_minus_n2; ++i)
 		{
-			for (int k = 0; k < m; ++k)
-			{
-				q(i,k) = P_theta(i,k) * pB(Bspline_uni_ind(i+n2), k);
-			}
+			Bspline_Mat.row(i) = pB.row(Bspline_uni_ind(i + n2));
 		}
-		q_row_sum = q.rowwise().sum();
-		Rcout << "q " << chrono::duration<double> (tic() - time1).count() << endl;
-		time1 = tic();
-		loglik += q_row_sum.array().log().sum();
-		loglik += -log(2. * M_PI * sigma_sq) * n / 2.;
+		q = P_theta.array() * Bspline_Mat.array();
 
+		
+		// for (int i=0; i<n_minus_n2; ++i) 
+		// {
+		// 	for (int k=0; k<m; ++k) 
+		// 	{
+		// 		q(i,k) = P_theta(i,k)*pB(Bspline_uni_ind(i+n2),k);
+		// 	}
+		// }
+		q_row_sum = q.rowwise().sum();		
+		
+		loglik += q_row_sum.array().log().sum();		
+		loglik += -log(2.*M_PI*sigma_sq)*n/2.;
+		
 		resi_n = Y.head(n2);
 		resi_n.noalias() -= X*theta.head(X_nc);
 		resi_n.noalias() -= ZW.topRows(n2)*theta.tail(ZW_nc);
-
+		
 		tmp = resi_n.squaredNorm();
 		tmp /= 2.*sigma_sq;
 		loglik -= tmp;
-		Rcout << "ending " << chrono::duration<double> (tic() - time1).count() << endl;
-
 		/**** calculate the likelihood *************************************************************************************************************/
-		Rcout << "WaldLinearGeneralSplineProfile: " << chrono::duration<double> (tic() - start).count() << endl;
-		return loglik;
+		
+		return loglik;	
 	}
 } // WaldLinearGeneralSplineProfile
 
@@ -354,6 +345,7 @@ List TwoPhase_GeneralSpline (
 	RowVectorXd q_col_sum(m);
 	MatrixXd pB(m_B, m);
 	MatrixXd P_theta(n_minus_n2, m);
+	MatrixXd Bspline_Mat(n_minus_n2, m);
 	double tol;
 	int iter, idx;
 	// /* RT's test code */
@@ -409,21 +401,20 @@ List TwoPhase_GeneralSpline (
 		/**** update P_theta ***********************************************************************************************************************/
 		time = tic();
 		/**** update q, q_row_sum ******************************************************************************************************************/
-		
-		for (int i = 0; i < n_minus_n2; ++i)
-		{
-			for (int k = 0; k < m; ++k)
-			{
-				q(i,k) = P_theta(i,k)*pB(Bspline_uni_ind(i+n2),k);
-			}
-			// q.row(i).array() = P_theta.row(i).array() * pB.row(Bspline_uni_ind(i+n2)).array();
-		}
-		// MatrixXd pB_Mat(n_minus_n2, pB.cols());
+
 		// for (int i = 0; i < n_minus_n2; ++i)
 		// {
-		// 	pB_Mat.row(i) = pB.row(Bspline_uni_ind(i+n2));
+		// 	for (int k = 0; k < m; ++k)
+		// 	{
+		// 		q(i,k) = P_theta(i,k)*pB(Bspline_uni_ind(i+n2),k);
+		// 	}
+		// 	// q.row(i).array() = P_theta.row(i).array() * pB.row(Bspline_uni_ind(i+n2)).array();
 		// }
-		// q = P_theta.array() * pB_Mat.array();
+		for (int i = 0; i < n_minus_n2; ++i)
+		{
+			Bspline_Mat.row(i) = pB.row(Bspline_uni_ind(i+n2));
+		}
+		q = P_theta.array() * Bspline_Mat.array();
 
 		q_row_sum = q.rowwise().sum();
 		for (int i = 0; i < n_minus_n2; ++i)
@@ -652,8 +643,8 @@ List TwoPhase_GeneralSpline (
 			// 		profile_mat(j,i) = profile_mat(i,j);
 			// 	}
 			// }
-			// 0 	1 	2  	3 	4 			0 	1 	2  	3 	4 
-			// 5 	6 	7 	8 	9 			1 	6 	7 	8 	9 
+			// 0 	1 	2  	3 	4 			0 	1 	2  	3 	4
+			// 5 	6 	7 	8 	9 			1 	6 	7 	8 	9
 			// 10 	11 	12 	13 	14 			2 	7 	12 	13 	14
 			// 15 	16 	17 	18 	19 			3 	8 	13 	18 	19
 			// 20 	21 	22 	23 	24 			4 	9 	14 	19 	24

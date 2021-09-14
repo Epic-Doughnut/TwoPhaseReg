@@ -8,17 +8,17 @@
 #define M 7 // indexx, indexx_Matrix_Row
 #define M_PI 3.14159265358979323846 // Wald_Linear_Kernel_Loglike
 
-void stdError (const string reason) 
+void stdError (const string reason)
 {
 	Rcpp::Rcout << reason << endl;
 	Rcpp::stop("Program was stopped due to error(s) listed above.\n");
 } // stdError
 
 bool BigArray (const RowVectorXd& arr1, const RowVectorXd& arr2, const int& maxIndex)
-{	
+{
 	int i = 0;
 
-	while (arr1(i) == arr2(i)) 
+	while (arr1(i) == arr2(i))
 	{
 		if (i++ == maxIndex - 1) return false;
 	}
@@ -27,10 +27,10 @@ bool BigArray (const RowVectorXd& arr1, const RowVectorXd& arr2, const int& maxI
 } // BigArray
 
 bool SmallArray (const RowVectorXd& arr1, const RowVectorXd& arr2, const int& maxIndex)
-{	
+{
 	int i = 0;
 
-	while (arr1(i) == arr2(i)) 
+	while (arr1(i) == arr2(i))
 	{
 		if (i++ == maxIndex - 1) return false;
 	}
@@ -39,12 +39,12 @@ bool SmallArray (const RowVectorXd& arr1, const RowVectorXd& arr2, const int& ma
 } // SmallArray
 
 bool EqualArray (const RowVectorXd& arr1, const RowVectorXd& arr2, const int& maxIndex)
-{	
+{
 	return arr1.head(maxIndex) == arr2.head(maxIndex);
 } // EqualArray
 
-VectorXi indexx_Matrix_Row (const MatrixXd& mat) 
-{	
+VectorXi indexx_Matrix_Row (const MatrixXd& mat)
+{
 	auto start = tic();
 
 	int n = mat.rows(), ncol = mat.cols(), i, indxt, ir = n - 1, j, k, l = 0, jstack = 0, tmp;
@@ -56,45 +56,45 @@ VectorXi indexx_Matrix_Row (const MatrixXd& mat)
 
 	while(true)
 	{
-		if (ir - l < M) 
+		if (ir - l < M)
 		{
-			for (j = l + 1; j <= ir; ++j) 
+			for (j = l + 1; j <= ir; ++j)
 			{
 				indxt = indx(j);
 				a = mat.row(indxt);
-				for (i = j - 1; i >= l; --i) 
+				for (i = j - 1; i >= l; --i)
 				{
 					if (!SmallArray(a, mat.row(indx(i)), ncol)) break;
 					indx(i+1) = indx(i);
 				}
 				indx(i+1) = indxt;
 			}
-			
+
 			if (jstack == 0) break;
 
 			ir = istack(jstack--);
 			l = istack(jstack--);
 			// Rcpp::Rcout << ir << " . " << l << endl;
-		} 
-		else 
+		}
+		else
 		{
 			k = (l+ir) >> 1;
 			tmp = indx(k);
 			indx(k) = indx(l+1);
 			indx(l+1) = tmp;
-			if (BigArray(mat.row(indx(l)), mat.row(indx(ir)), ncol)) 
+			if (BigArray(mat.row(indx(l)), mat.row(indx(ir)), ncol))
 			{
 				tmp = indx(l);
 				indx(l) = indx(ir);
 				indx(ir) = tmp;
 			}
-			if (BigArray(mat.row(indx(l+1)), mat.row(indx(ir)), ncol)) 
+			if (BigArray(mat.row(indx(l+1)), mat.row(indx(ir)), ncol))
 			{
 				tmp = indx(l+1);
 				indx(l+1) = indx(ir);
 				indx(ir) = tmp;
 			}
-			if (BigArray(mat.row(indx(l)), mat.row(indx(l+1)), ncol)) 
+			if (BigArray(mat.row(indx(l)), mat.row(indx(l+1)), ncol))
 			{
 				tmp = indx(l);
 				indx(l) = indx(l+1);
@@ -108,9 +108,9 @@ VectorXi indexx_Matrix_Row (const MatrixXd& mat)
 			{
 				do i++; while (SmallArray(mat.row(indx(i)), a, ncol));
 				do j--; while (BigArray(mat.row(indx(j)), a, ncol));
-				
+
 				if (j < i) break;
-				
+
 				tmp = indx(i);
 				indx(i) = indx(j);
 				indx(j) = tmp;
@@ -119,13 +119,13 @@ VectorXi indexx_Matrix_Row (const MatrixXd& mat)
 			indx(j) = indxt;
 			jstack += 2;
 			if (jstack > NSTACK) stdError("Error: NSTACK too small in indexx_Matrix_Row!");
-			if (ir-i+1 >= j-l) 
+			if (ir-i+1 >= j-l)
 			{
 				istack(jstack) = ir;
 				istack(jstack-1) = i;
 				ir = j-1;
-			} 
-			else 
+			}
+			else
 			{
 				istack(jstack) = j-1;
 				istack(jstack-1) = l;
@@ -137,42 +137,42 @@ VectorXi indexx_Matrix_Row (const MatrixXd& mat)
 	return indx;
 } // indexx_Matrix_Row
 
-int Num_Uni_Matrix_Row (const MatrixXd& mat, const VectorXi& index) 
+int Num_Uni_Matrix_Row (const MatrixXd& mat, const VectorXi& index)
 {
 	auto start = tic();
 	/***************************************************************************************
-	 Find the number of unique rows in "mat" and return it as "n1". "index" is the index 
-	 vector of the rows of "mat" output by "indexx_Matrix_Row". "mat" and "index" are not 
+	 Find the number of unique rows in "mat" and return it as "n1". "index" is the index
+	 vector of the rows of "mat" output by "indexx_Matrix_Row". "mat" and "index" are not
 	 changed.
-	***************************************************************************************/	
+	***************************************************************************************/
 	int ncol, nrow;
-	
+
 	ncol = mat.cols();
 	nrow = mat.rows();
-	
+
 	int n1 = 1;
-	for(int i=0; i<nrow-1; ++i) 
+	for(int i=0; i<nrow-1; ++i)
 	{
 		if(EqualArray(mat.row(index(i)), mat.row(index(i+1)), ncol));
-		else ++n1; 
+		else ++n1;
 	}
 	Rcout << "Num_Uni_Matrix_Row " << chrono::duration<double> (tic() - start).count() << endl;
 	return n1;
 } // Num_Uni_Matrix_Row
 
 void Create_Uni_Matrix_Row (const MatrixXd& mat, const VectorXi& index, MatrixXd& uni_mat,
-	VectorXi& ind, VectorXi& N_uni) 
+	VectorXi& ind, VectorXi& N_uni)
 {
 	auto start = tic();
 	/***************************************************************************************
-	 Create unique covariates. "mat" is a matrix (not changed). "index" is the index vector 
-	 of the rows of mat output by indexx_Matrix_Row (not changed). "uni_mat" is the matrix 
-	 of unique observations (output). "ind" is the vector of indexes of which one of the 
-	 unique rows the original observations correspond to (output). "N_uni" stores the 
+	 Create unique covariates. "mat" is a matrix (not changed). "index" is the index vector
+	 of the rows of mat output by indexx_Matrix_Row (not changed). "uni_mat" is the matrix
+	 of unique observations (output). "ind" is the vector of indexes of which one of the
+	 unique rows the original observations correspond to (output). "N_uni" stores the
 	 number of observations for each distinct covariates row (output).
 	***************************************************************************************/
 	int ncol, nrow, k;
-	
+
 	ncol = mat.cols();
 	nrow = mat.rows();
 
@@ -181,13 +181,13 @@ void Create_Uni_Matrix_Row (const MatrixXd& mat, const VectorXi& index, MatrixXd
 	ind(index(0)) = k;
 	N_uni(k) = 1;
 
-	for (int i=1; i<nrow; ++i) 
+	for (int i=1; i<nrow; ++i)
 	{
-		if (EqualArray(mat.row(index(i-1)), mat.row(index(i)), ncol)) 
+		if (EqualArray(mat.row(index(i-1)), mat.row(index(i)), ncol))
 		{
 			ind(index(i)) = k;
 			N_uni(k) += 1;
-		} 
+		}
 		else
 		{
 			++k;
@@ -200,8 +200,8 @@ void Create_Uni_Matrix_Row (const MatrixXd& mat, const VectorXi& index, MatrixXd
 
 } // Create_Uni_Matrix_Row
 
-VectorXi indexx_Vector (const VectorXd& vec) 
-{	
+VectorXi indexx_Vector (const VectorXd& vec)
+{
 	int n = vec.size(), i, indxt, ir=n-1, j, k, l=0, jstack=0, tmp;
 	double a;
 	VectorXi istack(NSTACK+1);
@@ -211,13 +211,13 @@ VectorXi indexx_Vector (const VectorXd& vec)
 
 	while (true)
 	{
-		if (ir-l < M) 
+		if (ir-l < M)
 		{
-			for (j=l+1; j<=ir; ++j) 
+			for (j=l+1; j<=ir; ++j)
 			{
 				indxt = indx(j);
 				a = vec(indxt);
-				for (i=j-1; i>=l; --i) 
+				for (i=j-1; i>=l; --i)
 				{
 					if (a > vec(indx(i))) break;
 					indx(i+1) = indx(i);
@@ -227,26 +227,26 @@ VectorXi indexx_Vector (const VectorXd& vec)
 			if (jstack == 0) break;
 			ir = istack(jstack--);
 			l = istack(jstack--);
-		} 
-		else 
+		}
+		else
 		{
 			k = (l+ir) >> 1;
 			tmp = indx(k);
 			indx(k) = indx(l+1);
 			indx(l+1) = tmp;
-			if (vec(indx(l)) > vec(indx(ir))) 
+			if (vec(indx(l)) > vec(indx(ir)))
 			{
 				tmp = indx(l);
 				indx(l) = indx(ir);
 				indx(ir) = tmp;
 			}
-			if (vec(indx(l+1)) > vec(indx(ir))) 
+			if (vec(indx(l+1)) > vec(indx(ir)))
 			{
 				tmp = indx(l+1);
 				indx(l+1) = indx(ir);
 				indx(ir) = tmp;
 			}
-			if (vec(indx(l)) > vec(indx(l+1))) 
+			if (vec(indx(l)) > vec(indx(l+1)))
 			{
 				tmp = indx(l);
 				indx(l) = indx(l+1);
@@ -269,13 +269,13 @@ VectorXi indexx_Vector (const VectorXd& vec)
 			indx(j) = indxt;
 			jstack += 2;
 			if (jstack > NSTACK) stdError("Error: NSTACK too small in indexx_Vector!");
-			if (ir - i + 1 >= j - l) 
+			if (ir - i + 1 >= j - l)
 			{
 				istack(jstack) = ir;
 				istack(jstack-1) = i;
 				ir = j-1;
-			} 
-			else 
+			}
+			else
 			{
 				istack(jstack) = j-1;
 				istack(jstack-1) = l;
@@ -287,8 +287,8 @@ VectorXi indexx_Vector (const VectorXd& vec)
 	return indx;
 } // indexx_Vector
 
-int Num_Distinct_Events (const VectorXd& Y, const VectorXi& Y_index, const VectorXi& Delta) 
-{	
+int Num_Distinct_Events (const VectorXd& Y, const VectorXi& Y_index, const VectorXi& Delta)
+{
 	double event_prev;
 	int n_event;
 
@@ -308,12 +308,12 @@ int Num_Distinct_Events (const VectorXd& Y, const VectorXi& Y_index, const Vecto
 			n_event = 0;
 			event_prev = -999.;
 		}
-		
-		for(int i=0; i<Y.size()-1; ++i) 
+
+		for(int i=0; i<Y.size()-1; ++i)
 		{
 			if(Y(Y_index(i)) == Y(Y_index(i+1)))
 			{
-				if (Delta(Y_index(i+1)) == 1 && event_prev != Y(Y_index(i+1))) 
+				if (Delta(Y_index(i+1)) == 1 && event_prev != Y(Y_index(i+1)))
 				{
 					++n_event;
 					event_prev = Y(Y_index(i+1));
@@ -321,7 +321,7 @@ int Num_Distinct_Events (const VectorXd& Y, const VectorXi& Y_index, const Vecto
 			}
 			else if (Y(Y_index(i)) < Y(Y_index(i+1)))
 			{
-				if (Delta(Y_index(i+1)) == 1) 
+				if (Delta(Y_index(i+1)) == 1)
 				{
 					++n_event;
 					event_prev = Y(Y_index(i+1));
@@ -331,19 +331,19 @@ int Num_Distinct_Events (const VectorXd& Y, const VectorXi& Y_index, const Vecto
 			{
 				stdError("Error: In Num_Distinct_Events(), Y(Y_index(i)) > Y(Y_index(i+1))");
 			}
-		}		
+		}
 	}
 
 	return n_event;
 } // Num_Distinct_Events
 
-void Create_Uni_Events (const VectorXd& Y, const VectorXi& Y_index, const VectorXi& Delta, 
-	VectorXd& Y_uni_event, VectorXi& Y_risk_ind, VectorXi& Y_uni_event_n) 
+void Create_Uni_Events (const VectorXd& Y, const VectorXi& Y_index, const VectorXi& Delta,
+	VectorXd& Y_uni_event, VectorXi& Y_risk_ind, VectorXi& Y_uni_event_n)
 {
 	auto start = tic();
 	double event_prev;
 	int k = -1, n_event = Y_uni_event.size();
-	
+
 	if (Delta(Y_index(0)) == 1)
 	{
 		++k;
@@ -355,8 +355,8 @@ void Create_Uni_Events (const VectorXd& Y, const VectorXi& Y_index, const Vector
 	{
 		event_prev = -999.;
 	}
-	
-	for(int i = 0; i < Y.size() - 1; ++i) 
+
+	for(int i = 0; i < Y.size() - 1; ++i)
 	{
 		if (Delta(Y_index(i+1)) == 1)
 		{
@@ -367,14 +367,14 @@ void Create_Uni_Events (const VectorXd& Y, const VectorXi& Y_index, const Vector
 					++k;
 					Y_uni_event(k) = Y(Y_index(i+1));
 					Y_uni_event_n(k) = 1;
-					event_prev = Y(Y_index(i+1));		
+					event_prev = Y(Y_index(i+1));
 				}
 				else
 				{
 					Y_uni_event_n(k) += 1;
 				}
 			}
-			else if (Y(Y_index(i)) < Y(Y_index(i+1))) 
+			else if (Y(Y_index(i)) < Y(Y_index(i+1)))
 			{
 				++k;
 				Y_uni_event(k) = Y(Y_index(i+1));
@@ -384,15 +384,18 @@ void Create_Uni_Events (const VectorXd& Y, const VectorXi& Y_index, const Vector
 			else
 			{
 				stdError("Error: In Create_Uni_Events(), Y(Y_index(i)) > Y(Y_index(i+1))");
-			}		
+			}
 		}
 	}
 
 	if (Delta.sum() != Y_uni_event_n.sum())
 	{
+		Rcout << Y_uni_event_n.sum() << '\t' << Delta.sum() << endl;
+		for (int i = 0; i < Y_uni_event_n.size(); ++i)
+			Rcout << i << '\t' << Y_uni_event_n(i) << endl;
 		stdError("Error: In Create_Uni_Events(), Delta.sum() != Y_uni_event_n.sum()");
 	}
-	
+
 	if (k != n_event-1)
 	{
 		stdError("Error: In Create_Uni_Events(), k != n_event-1");
@@ -433,11 +436,11 @@ void Create_Uni_Events (const VectorXd& Y, const VectorXi& Y_index, const Vector
 } // Create_Uni_Events
 
 void Create_Uni_Events_LeftTrunc (const VectorXd& Y, const VectorXd& L, const VectorXi& Y_index, const VectorXi& L_index,
-	const VectorXi& Delta, VectorXd& Y_uni_event, VectorXi& Y_risk_ind, VectorXi& Y_uni_event_n, VectorXi& L_risk_ind) 
+	const VectorXi& Delta, VectorXd& Y_uni_event, VectorXi& Y_risk_ind, VectorXi& Y_uni_event_n, VectorXi& L_risk_ind)
 {
 	double event_prev;
 	int k = -1, n_event = Y_uni_event.size();
-	
+
 	if (Delta(Y_index(0)) == 1)
 	{
 		++k;
@@ -449,10 +452,10 @@ void Create_Uni_Events_LeftTrunc (const VectorXd& Y, const VectorXd& L, const Ve
 	{
 		event_prev = -999.;
 	}
-	
-	for(int i=0; i<Y.size()-1; ++i) 
+
+	for(int i=0; i<Y.size()-1; ++i)
 	{
-		if (Delta(Y_index(i+1)) == 1) 
+		if (Delta(Y_index(i+1)) == 1)
 		{
 			if(Y(Y_index(i)) == Y(Y_index(i+1)))
 			{
@@ -461,7 +464,7 @@ void Create_Uni_Events_LeftTrunc (const VectorXd& Y, const VectorXd& L, const Ve
 					++k;
 					Y_uni_event(k) = Y(Y_index(i+1));
 					Y_uni_event_n(k) = 1;
-					event_prev = Y(Y_index(i+1));		
+					event_prev = Y(Y_index(i+1));
 				}
 				else
 				{
@@ -469,7 +472,7 @@ void Create_Uni_Events_LeftTrunc (const VectorXd& Y, const VectorXd& L, const Ve
 				}
 
 			}
-			else if (Y(Y_index(i)) < Y(Y_index(i+1))) 
+			else if (Y(Y_index(i)) < Y(Y_index(i+1)))
 			{
 
 				++k;
@@ -489,7 +492,7 @@ void Create_Uni_Events_LeftTrunc (const VectorXd& Y, const VectorXd& L, const Ve
 	{
 		stdError("Error: In Create_Uni_Events_LeftTrunc(), Delta.sum() != Y_uni_event_n.sum()");
 	}
-	
+
 	if (k != n_event-1)
 	{
 		stdError("Error: In Create_Uni_Events_LeftTrunc(), k != n_event-1");
@@ -524,7 +527,7 @@ void Create_Uni_Events_LeftTrunc (const VectorXd& Y, const VectorXd& L, const Ve
 		{
 			stdError("Error: In Create_Uni_Events_LeftTrunc(), k != 1 when calculating Y_risk_ind");
 		}
-		
+
 		k = n_event-1;
 		for (int i=L.size()-1; i>-1; --i)
 		{
@@ -557,15 +560,15 @@ double Var(const VectorXd& arr)
 {
 	const int n = arr.rows();
 	const double mean = arr.mean();
-	
+
 	double var=0., tmp;
-	
-	for (int i=0; i<n; ++i) 
+
+	for (int i=0; i<n; ++i)
 	{
 		tmp = arr(i) - mean;
 		var += tmp * tmp;
 	}
-	
+
 	var /= n;
 	return var;
 } // Var

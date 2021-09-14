@@ -3,7 +3,7 @@ library(Rcpp)
 library(RcppArmadillo)
 library(RcppEigen)
 library(tictoc)
-# Rcpp::sourceCpp('src/coxph.cpp')
+Rcpp::sourceCpp('src/coxph.cpp')
 Rcpp::sourceCpp('src/linear.cpp')
 # Rcpp::sourceCpp('src/linearMEXY.cpp')
 # Rcpp::sourceCpp('src/lmm.cpp')
@@ -66,6 +66,7 @@ for (i in 1:ncol(bs1)) {
 colnames(Bspline_Z) = paste("bs", 1:ncol(Bspline_Z), sep="")
 dat = data.frame(Y=simY, X=simX, Z1=simZ_1, Z2=simZ_2, Bspline_Z)
 dat[-phase2.id,"X"] = NA
+dat["Delta"] = c(rep(1, 546), rep(0, 2000-546))
 
 tic("smle")
 # TwoPhase_GeneralSpline
@@ -78,6 +79,7 @@ tic("smle")
 # Z1        0.3808042 0.07657005 4.9732790 6.582983e-07
 # Z2        0.4135827 0.07696735 5.3734818 7.723062e-08
 # Aug 24 : 133.49 sec elapsed
+# Sep 13 : 125.75 sec elapsed
 
 
 
@@ -94,15 +96,16 @@ tic("smle")
 
 
 # TwoPhase_GeneralSpline_logistic
-dat["Y"] = sample(c(0,1), nrow(dat), TRUE)
-res = smle(Y="Y", X="X", Z=c("Z1", "Z2"), Bspline_Z=colnames(Bspline_Z), data=dat, model="logistic")
+# dat["Y"] = sample(c(0,1), nrow(dat), TRUE)
+# res = smle(Y="Y", X="X", Z=c("Z1", "Z2"), Bspline_Z=colnames(Bspline_Z), data=dat, model="logistic")
 # $coefficients
 #              Estimate        SE  Statistic   p-value
 # Intercept -0.03133511 0.1527562 -0.2051314 0.8374694
 # X          0.35195573 0.3071224  1.1459786 0.2518040
 # Z1        -0.09435242 0.1658927 -0.5687557 0.5695219
 # Z2        -0.10004598 0.1647833 -0.6071365 0.5437603
-# 148.69 sec elapsed
+# Sep 2: 148.69 sec elapsed
+# Sep 8: 116.66 sec elapsed
 
 
 # TwoPhase_MLE0_logistic
@@ -111,12 +114,19 @@ res = smle(Y="Y", X="X", Z=c("Z1", "Z2"), Bspline_Z=colnames(Bspline_Z), data=da
 #              Estimate        SE   Statistic   p-value
 # Intercept -0.01363803 0.1830567 -0.07450169 0.9406112
 # X          0.13783433 0.2940132  0.46880314 0.6392104
-# Z1        -0.02346967 0.1507358 -0.15570075 0.8762689
+# Z1        -0.02346967 0.1507358 -0.15570075 0.8762689jk
 # Z2        -0.03550027 0.1522553 -0.23316271 0.8156351
 # 2539.78 sec elapsed
 
+# 100 iterations - abbr
+#              Estimate        SE   Statistic   p-value
+# Intercept -0.01363803 0.1535751 -0.08880363 0.9292380
+# X          0.13783433 0.1623791  0.84884282 0.3959688
+# Z1        -0.02346967 0.1495529 -0.15693225 0.8752982
+# Z2        -0.03550027 0.1510185 -0.23507233 0.8141526
+# 139.8 sec
 
-
+res = smle(Y="Y", X="X", Z=c("Z1", "Z2"), Bspline_Z=colnames(Bspline_Z), Delta="Y", data=dat, model="coxph")
 
 
 
