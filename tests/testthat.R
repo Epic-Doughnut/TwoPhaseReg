@@ -4,7 +4,7 @@ library(RcppArmadillo)
 library(RcppEigen)
 library(tictoc)
 Rcpp::sourceCpp('src/coxph.cpp')
-# Rcpp::sourceCpp('src/linear.cpp')
+Rcpp::sourceCpp('src/linear.cpp')
 # Rcpp::sourceCpp('src/linearMEXY.cpp')
 # Rcpp::sourceCpp('src/lmm.cpp')
 # Rcpp::sourceCpp('src/logistic.cpp')
@@ -71,7 +71,7 @@ dat["Delta"] = c(rep(1, sumnum), rep(0, 2000-sumnum))
 
 tic("smle")
 # TwoPhase_GeneralSpline
-# res = smle(Y="Y", X="X", Z=c("Z1", "Z2"), Bspline_Z=colnames(Bspline_Z), data=dat,model="linear")
+res = smle(Y="Y", X="X", Z=c("Z1", "Z2"), Bspline_Z=colnames(Bspline_Z), data=dat,model="linear")
 # 177.35 sec elapsed
 # $coefficients
 #            Estimate         SE Statistic      p-value

@@ -70,12 +70,14 @@ double WaldLinearGeneralSplineProfile (MatrixXd& pB, RowVectorXd& p_col_sum,
 		/**** update pB ****************************************************************************************************************************/
 				
 		/**** update q, q_row_sum ******************************************************************************************************************/
-				// Construct Bspline matrix
+		// Construct Bspline matrix - ~2x faster (0.01 sec)
+		
 		for (int i = 0; i < n_minus_n2; ++i)
 		{
 			Bspline_Mat.row(i) = pB.row(Bspline_uni_ind(i + n2));
 		}
 		q = P_theta.array() * Bspline_Mat.array();
+		
 		// for (int i = 0; i < n_minus_n2; ++i)
 		// {
 		// 	for (int k = 0; k < m; ++k)
@@ -99,7 +101,7 @@ double WaldLinearGeneralSplineProfile (MatrixXd& pB, RowVectorXd& p_col_sum,
 		
 		/**** update p *****************************************************************************************************************************/
 		p.setZero();
-				// Each row of P_theta is divided by q_row_sum[row]
+		// Each row of P_theta is divided by q_row_sum[row]
 		pthetaOverQ = P_theta.array().colwise() / q_row_sum.array();
 		
 		for (int i = 0; i < n_minus_n2; ++i)
@@ -148,7 +150,7 @@ double WaldLinearGeneralSplineProfile (MatrixXd& pB, RowVectorXd& p_col_sum,
 		/* test code */
 		// time(&t2);
 		// Rcpp::Rcout << iter << '\t' << difftime(t2, t1) << '\t' << tol << endl;
-		Rcout << iter << '\t' << chrono::duration<double>(tic() - time).count() << '\t' << tol << endl;
+		// Rcout << iter << '\t' << chrono::duration<double>(tic() - time).count() << '\t' << tol << endl;
 		/* test code end */
 	}
 	
