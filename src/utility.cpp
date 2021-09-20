@@ -390,9 +390,7 @@ void Create_Uni_Events (const VectorXd& Y, const VectorXi& Y_index, const Vector
 
 	if (Delta.sum() != Y_uni_event_n.sum())
 	{
-		Rcout << Y_uni_event_n.sum() << '\t' << Delta.sum() << endl;
-		for (int i = 0; i < Y_uni_event_n.size(); ++i)
-			Rcout << i << '\t' << Y_uni_event_n(i) << endl;
+		Rcout << Delta.sum() << '\t' << Y_uni_event_n.sum()   << endl;
 		stdError("Error: In Create_Uni_Events(), Delta.sum() != Y_uni_event_n.sum()");
 	}
 

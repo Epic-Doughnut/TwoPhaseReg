@@ -245,7 +245,7 @@ smle <- function (Y=NULL, Delta=NULL, X=NULL, Z=NULL, Bspline_Z=NULL, data=NULL,
 	} else if (model == "coxph") {
 		if (is.null(Bspline_Z)) {
 			if (is.null(Z)) {
-				res = .Call("TwoPhase_MLE0_noZW_coxph", Y_vec, Delta_vec, X_mat, MAX_ITER, TOL, noSE, package="TwoPhaseReg")
+				res = TwoPhase_MLE0_noZW_coxph(Y_vec, Delta_vec, X_mat, MAX_ITER, TOL, noSE)
 			} else {
 				res = TwoPhase_MLE0_coxph(Y_vec, Delta_vec, X_mat, Z_mat, MAX_ITER, TOL, noSE)
 			}
