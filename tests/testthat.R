@@ -4,10 +4,10 @@ library(RcppArmadillo)
 library(RcppEigen)
 library(tictoc)
 Rcpp::sourceCpp('src/coxph.cpp')
-Rcpp::sourceCpp('src/linear.cpp')
+# Rcpp::sourceCpp('src/linear.cpp')
 # Rcpp::sourceCpp('src/linearMEXY.cpp')
 # Rcpp::sourceCpp('src/lmm.cpp')
-Rcpp::sourceCpp('src/logistic.cpp')
+# Rcpp::sourceCpp('src/logistic.cpp')
 # Rcpp::sourceCpp('src/utility.cpp')
 source('R/smle.R')
 source('R/smle_lmm.R')
@@ -66,11 +66,12 @@ for (i in 1:ncol(bs1)) {
 colnames(Bspline_Z) = paste("bs", 1:ncol(Bspline_Z), sep="")
 dat = data.frame(Y=simY, X=simX, Z1=simZ_1, Z2=simZ_2, Bspline_Z)
 dat[-phase2.id,"X"] = NA
-dat["Delta"] = c(rep(1, 546), rep(0, 2000-546))
+sumnum <- 20
+dat["Delta"] = c(rep(1, sumnum), rep(0, 2000-sumnum))
 
 tic("smle")
 # TwoPhase_GeneralSpline
-# res = smle(Y="Y", X="X", Z=c("Z1", "Z2"), Bspline_Z=colnames(Bspline_Z), data=dat)
+# res = smle(Y="Y", X="X", Z=c("Z1", "Z2"), Bspline_Z=colnames(Bspline_Z), data=dat,model="linear")
 # 177.35 sec elapsed
 # $coefficients
 #            Estimate         SE Statistic      p-value
@@ -126,9 +127,49 @@ tic("smle")
 # Z2        -0.03550027 0.1510185 -0.23507233 0.8141526
 # 139.8 sec
 
-res = smle(Y="Y", X="X", Z=c("Z1", "Z2"), Bspline_Z=colnames(Bspline_Z), Delta="Y", data=dat, model="coxph")
+
+# TwoPhase_GeneralSpline_coxph
+# res = smle(Y="Y", X="X", Z=c("Z1", "Z2"), Bspline_Z=colnames(Bspline_Z), Delta="Delta", data=dat, model="coxph")
+# 20 Delta
+# Estimate        SE  Statistic   p-value
+# X   1.1585078 1.8492915  0.6264603 0.5310131
+# Z1 -0.5853910 0.8287508 -0.7063534 0.4799684
+# Z2 -0.2120672 0.8410371 -0.2521496 0.8009254
+# 534.81 sec elapsed
+
+# TwoPhase_MLE0_noZW_coxph
+# res = smle(Y="Y", X="X",  Delta="Delta", data=dat, model="coxph")
+# too long to measure
 
 
+# TwoPhase_MLE0_coxph INCONSISTENT OUTPUT
+# res = smle(Y="Y", X="X", Z=c("Z1", "Z2"), Delta="Delta", data=dat, model="coxph")
+#      Estimate            SE      Statistic p-value
+# X  -1.0218959 2.237591e-154 -4.566946e+153       0
+# Z1 -0.2691035 2.237542e-154 -1.202675e+153       0
+# Z2  0.1267448 3.731355e-159  3.396750e+157       0
+# smle: 275.84 sec elapsed
+
+# Estimate            SE      Statistic   p-value
+# X  -1.0218959  7.026472e+58  -1.454351e-59 1.0000000
+# Z1 -0.2691035 7.103049e+111 -3.788563e-113 1.0000000
+# Z2  0.1267448  3.669300e+02   3.454195e-04 0.9997244
+# 511 sec
+
+# Estimate            SE      Statistic   p-value
+# X  -1.0218959 2.237591e-154 -4.566946e+153 0.0000000
+# Z1 -0.2691035 2.237542e-154 -1.202675e+153 0.0000000
+# Z2  0.1267448  1.414214e+00   8.962211e-02 0.9285875
+
+# Estimate            SE      Statistic  p-value
+# X  -1.0218959 1.134131e+124 -9.010384e-125 1.000000
+# Z1 -0.2691035 3.383034e+121 -7.954503e-123 1.000000
+# Z2  0.1267448  1.433320e+00   8.842741e-02 0.929537
+
+# Estimate            SE      Statistic   p-value
+# X  -1.0218959 1.134131e+124 -9.010384e-125 1.0000000
+# Z1 -0.2691035 3.383034e+121 -7.954503e-123 1.0000000
+# Z2  0.1267448  1.414253e+00   8.961958e-02 0.9285895
 
 res
 toc()

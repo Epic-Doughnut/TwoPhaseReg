@@ -659,7 +659,7 @@ MatrixXd WaldLogisticVarianceMLE0 (const MatrixXd& LS_XtX, const VectorXd& p, co
 	}
 
 	for (int i = 0, idx = n2; i < n_minus_n2; ++i, ++idx)
-	// for (int i = 0, idx = n2; i < 100; ++i, ++idx)
+	// for (int i = 0, idx = n2; i < 100; ++i, ++idx) // bug-testing, shorter and inaccurate loop
 	{
 		auto outer = tic();
 		// const MatrixXd oldQ = Q;
