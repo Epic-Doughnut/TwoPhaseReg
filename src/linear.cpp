@@ -70,7 +70,7 @@ double WaldLinearGeneralSplineProfile (MatrixXd& pB, RowVectorXd& p_col_sum,
 		/**** update pB ****************************************************************************************************************************/
 				
 		/**** update q, q_row_sum ******************************************************************************************************************/
-		// Construct Bspline matrix - ~2x faster (0.01 sec)
+		// Construct Bspline matrix - ~2x faster (0.01)
 		
 		for (int i = 0; i < n_minus_n2; ++i)
 		{
@@ -579,15 +579,16 @@ List TwoPhase_GeneralSpline (
 		// profile_vec = WaldLinearGeneralSplineProfileVector(pB, p_col_sum, q_row_sum, p, p0, P_theta, q, resi_n,
 		// 		logp, theta, Y, X, Bspline_uni, ZW, X_uni,	X_uni_ind, Bspline_uni_ind, p_static, sigma_sq,
 		// 		n, n2, m, s, n_minus_n2, X_nc, ZW_nc, MAX_ITER, TOL, hn, ncov);
-		for (int i = 0; i < ncov + 1; ++i)
-		{
-			Rcout << profile_vec(i) << endl;
-			if(profile_vec(i) == -999.)
-			{
-				flag_nonconvergence_cov = true;
-				break;
-			}
-		}
+		// for (int i = 0; i < ncov + 1; ++i)
+		// {
+		// 	Rcout << profile_vec(i) << endl;
+		// 	if(profile_vec(i) == -999.)
+		// 	{
+		// 		flag_nonconvergence_cov = true;
+		// 		break;
+		// 	}
+		// }
+		flag_nonconvergence_cov = (profile_vec.array() == -999.).any();
 
 
 		for (int i=0; i<ncov; ++i)
@@ -612,7 +613,7 @@ List TwoPhase_GeneralSpline (
 				sigma_sq0 = sigma_sq;
 				loglik = WaldLinearGeneralSplineProfile(pB, p_col_sum, q_row_sum, p, p0, P_theta, q, resi_n, logp, theta0, Y, X, Bspline_uni, ZW, X_uni,
 					X_uni_ind, Bspline_uni_ind, p_static, sigma_sq0, n, n2, m, s, n_minus_n2, X_nc, ZW_nc, MAX_ITER, TOL);
-				Rcout << loglik << endl;
+				// Rcout << loglik << endl;
 				if (loglik == -999.)
 				{
 					flag_nonconvergence_cov = true;
@@ -650,15 +651,13 @@ List TwoPhase_GeneralSpline (
 			// 10 	11 	12 	13 	14 			2 	7 	12 	13 	14
 			// 15 	16 	17 	18 	19 			3 	8 	13 	18 	19
 			// 20 	21 	22 	23 	24 			4 	9 	14 	19 	24
-			// time = tic();
 			profile_mat = profile_mat.selfadjointView<Upper>();
-			// Rcout << profile_mat << endl;
+
 			profile_mat /= hn * hn;
 			profile_mat = -profile_mat;
 			// inv_profile_mat = profile_mat.selfadjointView<Upper>().ldlt().solve(MatrixXd::Identity(ncov+1, ncov+1));
 			inv_profile_mat = profile_mat.ldlt().solve(MatrixXd::Identity(ncov+1, ncov+1));
 			cov_theta = inv_profile_mat.topLeftCorner(ncov,ncov);
-			// Rcout << "inv_profile_mat calc " << chrono::duration<double> (tic() - time).count() << endl;
 
 		}
 	}

@@ -272,7 +272,7 @@ smle_lmm <- function (Y=NULL, Time=NULL, ID=NULL, X=NULL, Z=NULL, ZT=NULL, Bspli
             vc_initial[3] = res0$varcor[[1]][2,2]
             vc_initial[4] = res0$sigma^2	            
 	    }
-		res = .Call("LMM_GeneralSpline", Y_vec, T_vec, X_mat, Z_mat, ZT_colid, Bspline_Z_mat, index_obs, coef_initial, vc_initial, hn, MAX_ITER, TOL, noSE, package="TwoPhaseReg")
+		res = LMM_GeneralSpline(Y_vec, T_vec, X_mat, Z_mat, ZT_colid, Bspline_Z_mat, index_obs, coef_initial, vc_initial, hn, MAX_ITER, TOL, noSE)
 	}
     #### analysis #################################################################################################
 	###############################################################################################################
