@@ -11,30 +11,29 @@ typedef Map<VectorXd> MapVecd;
 typedef Map<VectorXi> MapVeci;
 typedef Map<MatrixXd> MapMatd;
 
-double WaldLinearMEXYGeneralSplineProfile (Ref<MatrixXd> pB, Ref<RowVectorXd> p_col_sum,
-	Ref<VectorXd> q_row_sum, Ref<MatrixXd> p, Ref<MatrixXd> p0, Ref<MatrixXd> P_theta, Ref<MatrixXd> q, Ref<VectorXd> resi_n, Ref<MatrixXd> logp,
-	const Ref<const VectorXd>& theta, const Ref<const VectorXd>& Y_tilde, const Ref<const VectorXd>& Y, const Ref<const MatrixXd>& X_tilde, 
-	const Ref<const MatrixXd>& X, const Ref<const MatrixXd>& Bspline_uni, const Ref<const MatrixXd>& Z, const Ref<const MatrixXd>& WU_uni, 
-	const Ref<const VectorXi>& WU_uni_ind, const Ref<const VectorXi>& Bspline_uni_ind, const Ref<const MatrixXd>& p_static, const double sigma_sq, 
+double WaldLinearMEXYGeneralSplineProfile (MatrixXd pB, RowVectorXd p_col_sum,
+	VectorXd q_row_sum, MatrixXd p, MatrixXd p0, MatrixXd P_theta, MatrixXd q, VectorXd resi_n, MatrixXd logp,
+	const VectorXd& theta, const VectorXd& Y_tilde, const VectorXd& Y, const MatrixXd& X_tilde, 
+	const MatrixXd& X, const MatrixXd& Bspline_uni, const MatrixXd& Z, const MatrixXd& WU_uni, 
+	const VectorXi& WU_uni_ind, const VectorXi& Bspline_uni_ind, const MatrixXd& p_static, const double sigma_sq, 
 	const int n, const int n2, const int m, const int s, const int n_minus_n2, const int X_nc, const int Z_nc, const int MAX_ITER, const double TOL) 
 {
 	/**** temporary variables **********************************************************************************************************************/	
 	double tol;
 	int iter;
-	time_t t1, t2;
+	// time_t t1, t2;
 	/**** temporary variables **********************************************************************************************************************/
 	
 	/**** update P_theta ***************************************************************************************************************************/	
-	P_theta.col(0) = Y_tilde.tail(n_minus_n2);
-	P_theta.col(0).noalias() -= X_tilde.bottomRows(n_minus_n2)*theta.head(X_nc);
-	P_theta.col(0).noalias() -= Z.bottomRows(n_minus_n2)*theta.tail(Z_nc);
-	for (int k=1; k<m; k++) 
+	P_theta.col(0) = Y_tilde.tail(n_minus_n2) - 
+		X_tilde.bottomRows(n_minus_n2)*theta.head(X_nc) -
+	 	Z.bottomRows(n_minus_n2)*theta.tail(Z_nc);
+		
+	const VectorXd pThetaColZero = P_theta.col(0);
+	for (int k=0; k<m; ++k) 
 	{
-		P_theta.col(k) = P_theta.col(0);
-	}		
-	for (int k=0; k<m; k++) 
-	{
-		P_theta.col(k).noalias() += VectorXd::Constant(n_minus_n2, -WU_uni(k,0)+(WU_uni.block(k,1,1,X_nc)*theta.head(X_nc))(0,0));
+		// P_theta.col(k).noalias() = pThetaColZero + VectorXd::Constant(n_minus_n2, -WU_uni(k,0) + (WU_uni.block(k,1,1,X_nc)*theta.head(X_nc))(0,0));
+		P_theta.col(k).noalias() = pThetaColZero + VectorXd::Constant(n_minus_n2, -WU_uni(k,0) + (WU_uni(k,1) * theta(0,0)));
 	}		
 	P_theta = P_theta.array().square();
 	P_theta /= -2.*sigma_sq;
@@ -43,16 +42,19 @@ double WaldLinearMEXYGeneralSplineProfile (Ref<MatrixXd> pB, Ref<RowVectorXd> p_
 		
 	/**** parameter initialization *****************************************************************************************************************/
 	p_col_sum = p_static.colwise().sum();
-	for (int j=0; j<s; j++) 
+	for (int j=0; j<s; ++j) 
 	{
 		p.col(j) = p_static.col(j)/p_col_sum(j);
 	}
 	p0 = p;
+	MatrixXd Bspline_Mat(n_minus_n2,m);
+ 	MatrixXd pthetaOverQ(P_theta.rows(), P_theta.cols());
+
 	/**** parameter initialization *****************************************************************************************************************/
 	
-	for (iter=0; iter<MAX_ITER; iter++) 
+	for (iter=0; iter<MAX_ITER; ++iter) 
 	{
-		time(&t1);
+		// time(&t1);
 		
 		/**** E-step *******************************************************************************************************************************/
 		
@@ -61,16 +63,22 @@ double WaldLinearMEXYGeneralSplineProfile (Ref<MatrixXd> pB, Ref<RowVectorXd> p_
 		/**** update pB ****************************************************************************************************************************/
 				
 		/**** update q, q_row_sum ******************************************************************************************************************/
-		for (int i=0; i<n_minus_n2; i++) 
+		// for (int i=0; i<n_minus_n2; i++) 
+		// {
+		// 	for (int k=0; k<m; k++) 
+		// 	{
+		// 		q(i,k) = P_theta(i,k)*pB(Bspline_uni_ind(i+n2),k);
+		// 	}
+		// }
+
+		for (int i = 0; i < n_minus_n2; ++i)
 		{
-			for (int k=0; k<m; k++) 
-			{
-				q(i,k) = P_theta(i,k)*pB(Bspline_uni_ind(i+n2),k);
-			}
+			Bspline_Mat.row(i) = pB.row(Bspline_uni_ind(i + n2));
 		}
+		q = P_theta.array() * Bspline_Mat.array();
 		
 		q_row_sum = q.rowwise().sum();		
-		for (int i=0; i<n_minus_n2; i++) 
+		for (int i=0; i<n_minus_n2; ++i) 
 		{
 			q.row(i) /= q_row_sum(i);
 		}
@@ -82,21 +90,25 @@ double WaldLinearMEXYGeneralSplineProfile (Ref<MatrixXd> pB, Ref<RowVectorXd> p_
 		/**** M-step *******************************************************************************************************************************/
 		
 		/**** update p *****************************************************************************************************************************/
-		p.setZero();		
-		for (int i=0; i<n_minus_n2; i++) 
+		p.setZero();	
+		pthetaOverQ = P_theta.array().colwise() / q_row_sum.array();
+	
+		for (int i=0; i<n_minus_n2; ++i) 
 		{
-			for (int k=0; k<m; k++) 
-			{
-				for (int j=0; j<s; j++) 
-				{
-					p(k,j) += Bspline_uni(Bspline_uni_ind(i+n2),j)*P_theta(i,k)/q_row_sum(i);
-				}
-			}
+			// for (int k=0; k<m; k++) 
+			// {
+			// 	for (int j=0; j<s; j++) 
+			// 	{
+			// 		p(k,j) += Bspline_uni(Bspline_uni_ind(i+n2),j)*P_theta(i,k)/q_row_sum(i);
+			// 	}
+			// }
+
+			p += pthetaOverQ.row(i).transpose() * Bspline_uni.row(Bspline_uni_ind(i + n2));
 		}		
 		p = p.array()*p0.array();
 		p += p_static;
 		p_col_sum = p.colwise().sum();
-		for (int j=0; j<s; j++) 
+		for (int j=0; j<s; ++j) 
 		{
 			p.col(j) /= p_col_sum(j);
 		}
@@ -119,7 +131,7 @@ double WaldLinearMEXYGeneralSplineProfile (Ref<MatrixXd> pB, Ref<RowVectorXd> p_
 		}
 		/**** check convergence ********************************************************************************************************************/
 		
-		time(&t2);
+		// time(&t2);
 		/* test code */
 		// Rcpp::Rcout << iter << '\t' << difftime(t2, t1) << '\t' << tol << endl;
 		/* test code end */
@@ -135,9 +147,9 @@ double WaldLinearMEXYGeneralSplineProfile (Ref<MatrixXd> pB, Ref<RowVectorXd> p_
 		double tmp, loglik;
 		
 		logp = p.array().log();
-		for (int k=0; k<m; k++)
+		for (int k=0; k<m; ++k)
 		{
-			for (int j=0; j<s; j++)
+			for (int j=0; j<s; ++j)
 			{
 				if (p(k,j) <= 0.)
 				{
@@ -148,23 +160,29 @@ double WaldLinearMEXYGeneralSplineProfile (Ref<MatrixXd> pB, Ref<RowVectorXd> p_
 		pB = Bspline_uni*logp.transpose();
 		
 		loglik = 0.;
-		for (int i=0; i<n2; i++) {
+		for (int i=0; i<n2; ++i) {
 			loglik += pB(Bspline_uni_ind(i),WU_uni_ind(i));
 		}
 		
 		pB = Bspline_uni*p.transpose();
 		
-		for (int i=0; i<n_minus_n2; i++) 
+		// for (int i=0; i<n_minus_n2; ++i) 
+		// {
+		// 	for (int k=0; k<m; ++k) 
+		// 	{
+		// 		q(i,k) = P_theta(i,k)*pB(Bspline_uni_ind(i+n2),k);
+		// 	}
+		// }
+		Bspline_Mat.setZero();
+		for (int i = 0; i < n_minus_n2; ++i)
 		{
-			for (int k=0; k<m; k++) 
-			{
-				q(i,k) = P_theta(i,k)*pB(Bspline_uni_ind(i+n2),k);
-			}
+			Bspline_Mat.row(i) = pB.row(Bspline_uni_ind(i + n2));
 		}
+		q = P_theta.array() * Bspline_Mat.array();
 		q_row_sum = q.rowwise().sum();		
 		
 		loglik += q_row_sum.array().log().sum();		
-		loglik += -log(2.*M_PI*sigma_sq)*n/2.;
+		loglik += -log(2.*M_PI*sigma_sq) * n/2.;
 		
 		resi_n = Y;
 		resi_n.noalias() -= X*theta.head(X_nc);
@@ -179,20 +197,30 @@ double WaldLinearMEXYGeneralSplineProfile (Ref<MatrixXd> pB, Ref<RowVectorXd> p_
 	}
 } // WaldLinearMEXYGeneralSplineProfile
 
-RcppExport SEXP TwoPhase_MLE0_MEXY (SEXP Y_tilde_R, SEXP X_tilde_R, SEXP Y_R, SEXP X_R, SEXP Z_R, SEXP Bspline_R, SEXP hn_R, SEXP MAX_ITER_R, SEXP TOL_R, SEXP noSE_R) 
+// [[Rcpp::export]]
+List TwoPhase_MLE0_MEXY (const MapVecd& Y_tilde,
+ const MapMatd& X_tilde,
+ const MapVecd& Y,
+ const MapMatd& X,
+ const MapMatd& Z,
+ const MapMatd& Bspline,
+ const double& hn,
+ const int& MAX_ITER,
+ const double& TOL,
+ const int& noSE) 
 {
 	/*#############################################################################################################################################*/
 	/**** pass arguments from R to cpp *************************************************************************************************************/
-	const MapVecd Y_tilde(as<MapVecd>(Y_tilde_R));
-	const MapMatd X_tilde(as<MapMatd>(X_tilde_R));
-	const MapVecd Y(as<MapVecd>(Y_R));
-	const MapMatd X(as<MapMatd>(X_R));
-	const MapMatd Z(as<MapMatd>(Z_R));
-	const MapMatd Bspline(as<MapMatd>(Bspline_R));
-	const double hn = NumericVector(hn_R)[0];
-	const int MAX_ITER = IntegerVector(MAX_ITER_R)[0];
-	const double TOL = NumericVector(TOL_R)[0];
-	const int noSE = IntegerVector(noSE_R)[0];
+	// const MapVecd Y_tilde(as<MapVecd>(Y_tilde_R));
+	// const MapMatd X_tilde(as<MapMatd>(X_tilde_R));
+	// const MapVecd Y(as<MapVecd>(Y_R));
+	// const MapMatd X(as<MapMatd>(X_R));
+	// const MapMatd Z(as<MapMatd>(Z_R));
+	// const MapMatd Bspline(as<MapMatd>(Bspline_R));
+	// const double hn = NumericVector(hn_R)[0];
+	// const int MAX_ITER = IntegerVector(MAX_ITER_R)[0];
+	// const double TOL = NumericVector(TOL_R)[0];
+	// const int noSE = IntegerVector(noSE_R)[0];
 	/**** pass arguments from R to cpp *************************************************************************************************************/
 	/*#############################################################################################################################################*/
 	
@@ -229,11 +257,9 @@ RcppExport SEXP TwoPhase_MLE0_MEXY (SEXP Y_tilde_R, SEXP X_tilde_R, SEXP Y_R, SE
 	// WU_uni_ind(n2): row index of rows of WU in WU_uni
 	// WU_uni(m, WU_nc): distinct rows of WU
 	// WU_uni_n(m): count of appearances of each distinct row of WU	
-	int m;
-	VectorXi WU_index(n2);
-	VectorXi WU_uni_ind(n2);	
-	indexx_Matrix_Row(WU, WU_index);
-	Num_Uni_Matrix_Row(WU, WU_index, m);	
+	VectorXi WU_index = indexx_Matrix_Row(WU);
+	int m = Num_Uni_Matrix_Row(WU, WU_index);	
+	VectorXi WU_uni_ind(n2);		
 	MatrixXd WU_uni(m, WU_nc); 
 	VectorXi WU_uni_n(m);	
 	Create_Uni_Matrix_Row(WU, WU_index, WU_uni, WU_uni_ind, WU_uni_n);
@@ -248,11 +274,9 @@ RcppExport SEXP TwoPhase_MLE0_MEXY (SEXP Y_tilde_R, SEXP X_tilde_R, SEXP Y_R, SE
 	// Bspline_uni_ind(n): row index of rows of Bspline in Bspline_uni
 	// Bspline_uni(m_B, s): distinct rows of Bspline
 	// Bspline_uni_n(m_B): count of appearances of each distinct row of Bspline
-	int m_B;
-	VectorXi Bspline_index(n);
+	VectorXi Bspline_index = indexx_Matrix_Row(Bspline);
+	int m_B = Num_Uni_Matrix_Row(Bspline, Bspline_index);	
 	VectorXi Bspline_uni_ind(n);	
-	indexx_Matrix_Row(Bspline, Bspline_index);
-	Num_Uni_Matrix_Row(Bspline, Bspline_index, m_B);	
 	MatrixXd Bspline_uni(m_B, s);
 	VectorXi Bspline_uni_n(m_B);
 	Create_Uni_Matrix_Row(Bspline, Bspline_index, Bspline_uni, Bspline_uni_ind, Bspline_uni_n);
@@ -285,7 +309,7 @@ RcppExport SEXP TwoPhase_MLE0_MEXY (SEXP Y_tilde_R, SEXP X_tilde_R, SEXP Y_R, SE
 	// p
 	MatrixXd p_static(m, s); 
 	p_static.setZero();
-	for (int i=0; i<n2; i++) 
+	for (int i=0; i<n2; ++i) 
 	{
 		p_static.row(WU_uni_ind(i)) += Bspline.row(i);
 	}	
@@ -322,7 +346,8 @@ RcppExport SEXP TwoPhase_MLE0_MEXY (SEXP Y_tilde_R, SEXP X_tilde_R, SEXP Y_R, SE
 	MatrixXd P_theta(n_minus_n2, m);
 	double tol;
 	int iter, idx;
-	time_t t1, t2;
+	MatrixXd Bspline_Mat(n_minus_n2,m);
+	// time_t t1, t2;
 	/**** temporary variables **********************************************************************************************************************/
 	/*#############################################################################################################################################*/
 	
@@ -337,7 +362,7 @@ RcppExport SEXP TwoPhase_MLE0_MEXY (SEXP Y_tilde_R, SEXP X_tilde_R, SEXP Y_R, SE
 	sigma_sq = sigma_sq0 = Var(Y_tilde);
 
 	p_col_sum = p_static.colwise().sum();
-	for (int j=0; j<s; j++) 
+	for (int j=0; j<s; ++j) 
 	{
 		p.col(j) = p_static.col(j)/p_col_sum(j);
 	}
@@ -347,9 +372,9 @@ RcppExport SEXP TwoPhase_MLE0_MEXY (SEXP Y_tilde_R, SEXP X_tilde_R, SEXP Y_R, SE
 	flag_nonconvergence_cov = false;
 	/**** parameter initialization *****************************************************************************************************************/
 	
-	for (iter=0; iter<MAX_ITER; iter++) 
+	for (iter=0; iter<MAX_ITER; ++iter) 
 	{
-		time(&t1);
+		// time(&t1);
 		
 		/**** E-step *******************************************************************************************************************************/
 		
@@ -358,16 +383,15 @@ RcppExport SEXP TwoPhase_MLE0_MEXY (SEXP Y_tilde_R, SEXP X_tilde_R, SEXP Y_R, SE
 		/**** update pB ****************************************************************************************************************************/
 						
 		/**** update P_theta ***********************************************************************************************************************/
-		P_theta.col(0) = Y_tilde.tail(n_minus_n2);
-		P_theta.col(0).noalias() -= X_tilde.bottomRows(n_minus_n2)*theta.head(X_nc);
-		P_theta.col(0).noalias() -= Z.bottomRows(n_minus_n2)*theta.tail(Z_nc);
-		for (int k=1; k<m; k++) 
+		P_theta.col(0) = Y_tilde.tail(n_minus_n2) - 
+			X_tilde.bottomRows(n_minus_n2)*theta.head(X_nc) - 
+			Z.bottomRows(n_minus_n2)*theta.tail(Z_nc);
+		
+		const VectorXd pThetaColZero = P_theta.col(0);
+		for (int k=0; k<m; ++k) 
 		{
-			P_theta.col(k) = P_theta.col(0);
-		}		
-		for (int k=0; k<m; k++) 
-		{
-			P_theta.col(k).noalias() += VectorXd::Constant(n_minus_n2, -WU_uni(k,0)+(WU_uni.block(k,1,1,X_nc)*theta.head(X_nc))(0,0));
+			// P_theta.col(k).noalias() += VectorXd::Constant(n_minus_n2, -WU_uni(k,0)+(WU_uni.block(k,1,1,X_nc)*theta.head(X_nc))(0,0));
+			P_theta.col(k).noalias() = pThetaColZero + VectorXd::Constant(n_minus_n2, -WU_uni(k,0) + WU_uni(k,1) * theta(0));
 		}		
 		P_theta = P_theta.array().square();
 		P_theta /= -2.*sigma_sq;
@@ -375,15 +399,21 @@ RcppExport SEXP TwoPhase_MLE0_MEXY (SEXP Y_tilde_R, SEXP X_tilde_R, SEXP Y_R, SE
 		/**** update P_theta ***********************************************************************************************************************/
 		
 		/**** update q, q_row_sum ******************************************************************************************************************/
-		for (int i=0; i<n_minus_n2; i++) 
+		// for (int i=0; i<n_minus_n2; ++i) 
+		// {
+		// 	for (int k=0; k<m; ++k) 
+		// 	{
+		// 		q(i,k) = P_theta(i,k)*pB(Bspline_uni_ind(i+n2),k);
+		// 	}
+		// }
+		for (int i = 0; i < n_minus_n2; ++i)
 		{
-			for (int k=0; k<m; k++) 
-			{
-				q(i,k) = P_theta(i,k)*pB(Bspline_uni_ind(i+n2),k);
-			}
+			Bspline_Mat.row(i) = pB.row(Bspline_uni_ind(i+n2));
 		}
+		q = P_theta.array() * Bspline_Mat.array();
+
 		q_row_sum = q.rowwise().sum();		
-		for (int i=0; i<n_minus_n2; i++) 
+		for (int i=0; i<n_minus_n2; ++i) 
 		{
 			q.row(i) /= q_row_sum(i);
 		}
@@ -400,17 +430,17 @@ RcppExport SEXP TwoPhase_MLE0_MEXY (SEXP Y_tilde_R, SEXP X_tilde_R, SEXP Y_R, SE
 		LS_XtX = LS_XtX_static;
 		LS_XtY = LS_XtY_static;
 	
-		for (int k=0; k<m; k++) 
+		for (int k=0; k<m; ++k) 
 		{
 			LS_YtY += q_col_sum(k)*WU_uni(k,0)*WU_uni(k,0);
 			LS_XtX.topLeftCorner(X_nc,X_nc).noalias() += q_col_sum(k)*WU_uni.block(k,1,1,X_nc).transpose()*WU_uni.block(k,1,1,X_nc);
 			LS_XtY.head(X_nc).noalias() += q_col_sum(k)*WU_uni.block(k,1,1,X_nc).transpose()*WU_uni(k,0);		
 		}
 		
-		for (int i=0; i<n_minus_n2; i++) 
+		for (int i=0; i<n_minus_n2; ++i) 
 		{
 			idx = i+n2;
-			for (int k=0; k<m; k++) 
+			for (int k=0; k<m; ++k) 
 			{
 				LS_YtY -= 2.*q(i,k)*Y_tilde(idx)*WU_uni(k,0);
 				LS_XtX.topLeftCorner(X_nc,X_nc).noalias() -= q(i,k)*(WU_uni.block(k,1,1,X_nc).transpose()*X_tilde.row(idx)+X_tilde.row(idx).transpose()*WU_uni.block(k,1,1,X_nc));
@@ -426,21 +456,25 @@ RcppExport SEXP TwoPhase_MLE0_MEXY (SEXP Y_tilde_R, SEXP X_tilde_R, SEXP Y_R, SE
 		/**** update theta and sigma_sq ************************************************************************************************************/
 		
 		/**** update p *****************************************************************************************************************************/
-		p.setZero();		
-		for (int i=0; i<n_minus_n2; i++) 
+		p.setZero();	
+		const MatrixXd pthetaOverQ = P_theta.array().colwise() / q_row_sum.array();
+
+		for (int i=0; i<n_minus_n2; ++i) 
 		{
-			for (int k=0; k<m; k++) 
-			{
-				for (int j=0; j<s; j++) 
-				{
-					p(k,j) += Bspline_uni(Bspline_uni_ind(i+n2),j)*P_theta(i,k)/q_row_sum(i);
-				}
-			}
+			// for (int k=0; k<m; ++k) 
+			// {
+			// 	for (int j=0; j<s; ++j) 
+			// 	{
+			// 		p(k,j) += Bspline_uni(Bspline_uni_ind(i+n2),j)*P_theta(i,k)/q_row_sum(i);
+			// 	}
+			// }
+			p += pthetaOverQ.row(i).transpose() * Bspline_uni.row(Bspline_uni_ind(i + n2));
+
 		}		
 		p = p.array()*p0.array();
 		p += p_static;
 		p_col_sum = p.colwise().sum();
-		for (int j=0; j<s; j++) 
+		for (int j=0; j<s; ++j) 
 		{
 			p.col(j) /= p_col_sum(j);
 		}
@@ -468,7 +502,7 @@ RcppExport SEXP TwoPhase_MLE0_MEXY (SEXP Y_tilde_R, SEXP X_tilde_R, SEXP Y_R, SE
 		}
 		/**** check convergence ********************************************************************************************************************/
 		
-		time(&t2);
+		// time(&t2);
 		// /* RT's test code */
 		// Rcout << iter << '\t' << difftime(t2, t1) << '\t' << tol << endl;
 		// /* RT's test code end */
@@ -511,15 +545,16 @@ RcppExport SEXP TwoPhase_MLE0_MEXY (SEXP Y_tilde_R, SEXP X_tilde_R, SEXP Y_R, SE
 		{
 			flag_nonconvergence_cov = true;
 		}
-		for (int i=0; i<ncov+1; i++) 
-		{
-			for (int j=i; j<ncov+1; j++) 
-			{
-				profile_mat(i,j) = loglik;
-			}
-		}
-		 		
-		for (int i=0; i<ncov; i++) 
+		// for (int i=0; i<ncov+1; ++i) 
+		// {
+		// 	for (int j=i; j<ncov+1; ++j) 
+		// 	{
+		// 		profile_mat(i,j) = loglik;
+		// 	}
+		// }
+		profile_mat.triangularView<Upper>().setConstant(loglik);
+
+		for (int i=0; i<ncov; ++i) 
 		{
 			theta0 = theta;
 			theta0(i) += hn;
@@ -531,15 +566,15 @@ RcppExport SEXP TwoPhase_MLE0_MEXY (SEXP Y_tilde_R, SEXP X_tilde_R, SEXP Y_R, SE
 		sigma_sq0 = sigma_sq+hn;	
 		profile_vec(ncov) = WaldLinearMEXYGeneralSplineProfile (pB, p_col_sum, q_row_sum, p, p0, P_theta, q, resi_n, logp, theta0, Y_tilde, Y, X_tilde, X, Bspline_uni,
 			Z, WU_uni, WU_uni_ind, Bspline_uni_ind, p_static, sigma_sq0, n, n2, m, s, n_minus_n2, X_nc, Z_nc, MAX_ITER, TOL);
-		for (int i=0; i<ncov+1; i++) 
-		{
-			if(profile_vec(i) == -999.) 
-			{
-				flag_nonconvergence_cov = true;
-			}
-		}
-		
-		for (int i=0; i<ncov; i++) 
+		// for (int i=0; i<ncov+1; ++i) 
+		// {
+		// 	if(profile_vec(i) == -999.) 
+		// 	{
+		// 		flag_nonconvergence_cov = true;
+		// 	}
+		// }
+		flag_nonconvergence_cov = (profile_vec.array() == -999.).any();
+		for (int i=0; i<ncov; ++i) 
 		{
 			theta0 = theta;
 			theta0(i) += hn;
@@ -552,7 +587,7 @@ RcppExport SEXP TwoPhase_MLE0_MEXY (SEXP Y_tilde_R, SEXP X_tilde_R, SEXP Y_R, SE
 			}
 			profile_mat(i,ncov) += loglik;
 			profile_mat(i,ncov) -= profile_vec(i)+profile_vec(ncov);
-			for (int j=i; j<ncov; j++) 
+			for (int j=i; j<ncov; ++j) 
 			{
 				theta0 = theta;
 				theta0(i) += hn;
@@ -585,9 +620,9 @@ RcppExport SEXP TwoPhase_MLE0_MEXY (SEXP Y_tilde_R, SEXP X_tilde_R, SEXP Y_R, SE
 		} 
 		else 
 		{		
-			for (int i=0; i<ncov+1; i++) 
+			for (int i=0; i<ncov+1; ++i) 
 			{
-				for (int j=i+1; j<ncov+1; j++) 
+				for (int j=i+1; j<ncov+1; ++j) 
 				{
 					profile_mat(j,i) = profile_mat(i,j);
 				}
