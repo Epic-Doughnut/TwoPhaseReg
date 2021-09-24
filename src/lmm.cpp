@@ -116,7 +116,7 @@ double LMM_GeneralSplineProfile (MatrixXd& pB, RowVectorXd& p_col_sum, VectorXd&
 		{
 			V[i].setIdentity();
 			V[i] *= vcparams(3);
-			V[i].noalias() 	+= U.block(index_obs(i,0), 0, index_obs(i, 1), 2)*D*U.block(index_obs(i, 0), 0, index_obs(i, 1), 2).transpose();
+			V[i].noalias() += U.block(index_obs(i,0), 0, index_obs(i, 1), 2)*D*U.block(index_obs(i, 0), 0, index_obs(i, 1), 2).transpose();
 			V_inv[i] = V[i].selfadjointView<Eigen::Upper>().ldlt().solve(MatrixXd::Identity(index_obs(i,1), index_obs(i, 1)));
 		}
 		/**** update V *****************************************************************************************************************************/
@@ -164,8 +164,8 @@ double LMM_GeneralSplineProfile (MatrixXd& pB, RowVectorXd& p_col_sum, VectorXd&
 /**** update variance components parameters ************************************************************************************************/
 		for (int i=0; i<n; ++i)
 		{
-			V_inv_1[i] = V_inv[i].rowwise().sum();
-			V_inv_T[i] = V_inv[i]*T.segment(index_obs(i,0), index_obs(i, 1));
+			V_inv_1[i]  = V_inv[i].rowwise().sum();
+			V_inv_T[i]  = V_inv[i]*T.segment(index_obs(i,0), index_obs(i, 1));
 			V_inv_11(i) = V_inv_1[i].sum();
 			V_inv_1T(i) = V_inv_T[i].sum();
 			V_inv_TT(i) = V_inv_T[i].dot(T.segment(index_obs(i,0), index_obs(i, 1)));
@@ -176,9 +176,9 @@ double LMM_GeneralSplineProfile (MatrixXd& pB, RowVectorXd& p_col_sum, VectorXd&
 
 		for (int i=0; i<n2; ++i)
 		{
-			V_inv_1R = V_inv_1[i].dot(resi2.segment(index_obs(i,0), index_obs(i, 1)));
-			V_inv_TR = V_inv_T[i].dot(resi2.segment(index_obs(i,0), index_obs(i, 1)));
-			V_inv_R2 = (V_inv[i]*resi2.segment(index_obs(i,0), index_obs(i, 1))).squaredNorm();
+			V_inv_1R 	 = V_inv_1[i].dot(resi2.segment(index_obs(i,0), index_obs(i, 1)));
+			V_inv_TR 	 = V_inv_T[i].dot(resi2.segment(index_obs(i,0), index_obs(i, 1)));
+			V_inv_R2 	 = (V_inv[i]*resi2.segment(index_obs(i,0), index_obs(i, 1))).squaredNorm();
 
 			L_var(0) 	+= V_inv_1R*V_inv_1R-V_inv_11(i);
 			L_var(1) 	+= 2.*(V_inv_TR*V_inv_1R-V_inv_1T(i));
@@ -208,10 +208,10 @@ double LMM_GeneralSplineProfile (MatrixXd& pB, RowVectorXd& p_col_sum, VectorXd&
 				V_inv_TR = (V_inv_T[idx].transpose()*resi.block(idxx, k, index_obs(idx, 1), 1))(0, 0);
 				V_inv_R2 = (V_inv[idx]*resi.block(idxx, k, index_obs(idx, 1), 1)).squaredNorm();
 
-				L_var(0) 	+= q(i,k)*V_inv_1R*V_inv_1R;
-				L_var(1) 	+= 2.*q(i,k)*V_inv_TR*V_inv_1R;
-				L_var(2) 	+= q(i,k)*V_inv_TR*V_inv_TR;
-				L_var(3) 	+= q(i,k)*V_inv_R2;
+				L_var(0) += q(i,k)*V_inv_1R*V_inv_1R;
+				L_var(1) += 2.*q(i,k)*V_inv_TR*V_inv_1R;
+				L_var(2) += q(i,k)*V_inv_TR*V_inv_TR;
+				L_var(3) += q(i,k)*V_inv_R2;
 			}
 
 			L_var(0) -= V_inv_11(idx);
@@ -232,7 +232,7 @@ double LMM_GeneralSplineProfile (MatrixXd& pB, RowVectorXd& p_col_sum, VectorXd&
 		}
 
 		vcparams = I_var.selfadjointView<Eigen::Upper>().ldlt().solve(L_var);
-		vcparams 	+= vcparams0;
+		vcparams += vcparams0;
 /**** update variance components parameters ************************************************************************************************/
 
 /**** update p *****************************************************************************************************************************/
@@ -248,11 +248,11 @@ double LMM_GeneralSplineProfile (MatrixXd& pB, RowVectorXd& p_col_sum, VectorXd&
 			// 		p(k,j) 	+= Bspline_uni(Bspline_uni_ind(i+n2),j)*P_theta(i,k)/q_row_sum(i);
 			// 	}
 			// }
-			p 	+= pthetaOverQ.row(i).transpose() * Bspline_uni.row(Bspline_uni_ind(i + n2));
+			p += pthetaOverQ.row(i).transpose() * Bspline_uni.row(Bspline_uni_ind(i + n2));
 
 		}
 		p = p.array()*p0.array();
-		p 	+= p_static;
+		p += p_static;
 		p_col_sum = p.colwise().sum();
 		for (int j=0; j<s; ++j)
 		{
@@ -265,7 +265,7 @@ double LMM_GeneralSplineProfile (MatrixXd& pB, RowVectorXd& p_col_sum, VectorXd&
 
 /**** calculate the sum of absolute differences between estimates in the current and previous iterations ***********************************/
 		tol = (vcparams-vcparams0).array().abs().sum();
-		tol 	+= (p-p0).array().abs().sum();
+		tol += (p-p0).array().abs().sum();
 /**** calculate the sum of absolute differences between estimates in the current and previous iterations ***********************************/
 
 /**** update parameters ********************************************************************************************************************/
@@ -312,7 +312,7 @@ double LMM_GeneralSplineProfile (MatrixXd& pB, RowVectorXd& p_col_sum, VectorXd&
 		loglik = 0.;
 		for (int i=0; i<n2; ++i) 
 		{
-			loglik 	+= pB(Bspline_uni_ind(i),X_uni_ind(i));
+			loglik += pB(Bspline_uni_ind(i),X_uni_ind(i));
 		}
 
 		pB = Bspline_uni*p.transpose();
@@ -325,7 +325,7 @@ double LMM_GeneralSplineProfile (MatrixXd& pB, RowVectorXd& p_col_sum, VectorXd&
 		{
 			V[i].setIdentity();
 			V[i] *= vcparams(3);
-			V[i].noalias() 	+= U.block(index_obs(i,0), 0, index_obs(i, 1), 2)*D*U.block(index_obs(i, 0), 0, index_obs(i, 1), 2).transpose();
+			V[i].noalias() += U.block(index_obs(i,0), 0, index_obs(i, 1), 2)*D*U.block(index_obs(i, 0), 0, index_obs(i, 1), 2).transpose();
 			V_inv[i] = V[i].selfadjointView<Eigen::Upper>().ldlt().solve(MatrixXd::Identity(index_obs(i,1), index_obs(i, 1)));
 		}
 
@@ -355,7 +355,7 @@ double LMM_GeneralSplineProfile (MatrixXd& pB, RowVectorXd& p_col_sum, VectorXd&
 		q = P_theta.array() * Bspline_Mat.array();
 		q_row_sum = q.rowwise().sum();
 
-		loglik 	+= q_row_sum.array().log().sum();
+		loglik += q_row_sum.array().log().sum();
 		loglik -= log(2.*M_PI)*nobs/2.;
 		for (int i=0; i<n; ++i)
 		{
@@ -428,7 +428,7 @@ List LMM_GeneralSpline (const MapVecd& Y,
 	{
 		ZT_flag = true;
 		ZT_nc = ZT_colid.size();
-		ncov 	+= ZT_nc;
+		ncov += ZT_nc;
 		ZT.resize(n,ZT_nc);
 		for (int k=0; k<ZT_nc; ++k) {
 			ZT.col(k) = Z.col(ZT_colid(k));
@@ -889,7 +889,7 @@ List LMM_GeneralSpline (const MapVecd& Y,
 		}
 
 		vcparams = I_var.selfadjointView<Eigen::Upper>().ldlt().solve(L_var);
-		vcparams 	+= vcparams0;
+		vcparams += vcparams0;
 	/**** update variance components parameters ************************************************************************************************/
 
 	/**** update p *****************************************************************************************************************************/
@@ -905,11 +905,11 @@ List LMM_GeneralSpline (const MapVecd& Y,
 			// 		p(k,j) 	+= Bspline_uni(Bspline_uni_ind(i+n2),j)*P_theta(i,k)/q_row_sum(i);
 			// 	}
 			// }
-			p 	+= pthetaOverQ.row(i).transpose() * Bspline_uni.row(Bspline_uni_ind(i + n2));
+			p += pthetaOverQ.row(i).transpose() * Bspline_uni.row(Bspline_uni_ind(i + n2));
 
 		}
 		p = p.array()*p0.array();
-		p 	+= p_static;
+		p += p_static;
 		p_col_sum = p.colwise().sum();
 		for (int j=0; j<s; ++j)
 		{
@@ -922,8 +922,8 @@ List LMM_GeneralSpline (const MapVecd& Y,
 
 	/**** calculate the sum of absolute differences between estimates in the current and previous iterations ***********************************/
 		tol = (theta-theta0).array().abs().sum();
-		tol 	+= (vcparams-vcparams0).array().abs().sum();
-		tol 	+= (p-p0).array().abs().sum();
+		tol += (vcparams-vcparams0).array().abs().sum();
+		tol += (p-p0).array().abs().sum();
 	/**** calculate the sum of absolute differences between estimates in the current and previous iterations ***********************************/
 
 	/**** update parameters ********************************************************************************************************************/
@@ -993,7 +993,7 @@ List LMM_GeneralSpline (const MapVecd& Y,
 		for (int i=0; i<ncov; ++i)
 		{
 			theta0 = theta;
-			theta0(i) 	+= hn;
+			theta0(i) += hn;
 			profile_vec(i) = LMM_GeneralSplineProfile(pB,p_col_sum,q_row_sum,vcparams,vcparams0,p,p0,P_theta,q,logp,Z_theta,X_uni_theta,TX_uni_theta,resi2,resi,
 				D,V,V_inv,V_inv_1,V_inv_T,V_inv_11,V_inv_1T,V_inv_TT,L_var,I_var,TZ_theta,theta0,vc_initial,Y,T,U,index_obs,Bspline_uni,Z,X_uni,X_uni_ind,
 				Bspline_uni_ind,p_static,n,n2,m,s,n_minus_n2,nobs,nobs2,X_nc,Z_nc,nT,MAX_ITER,TOL,nZ,nXT,ZT_flag,ZT_nc,ZT);
@@ -1008,8 +1008,8 @@ List LMM_GeneralSpline (const MapVecd& Y,
 			for (int j=i; j<ncov; ++j)
 			{
 				theta0 = theta;
-				theta0(i) 	+= hn;
-				theta0(j) 	+= hn;
+				theta0(i) += hn;
+				theta0(j) += hn;
 				loglik = LMM_GeneralSplineProfile(pB,p_col_sum,q_row_sum,vcparams,vcparams0,p,p0,P_theta,q,logp,Z_theta,X_uni_theta,TX_uni_theta,resi2,resi,
 					D,V,V_inv,V_inv_1,V_inv_T,V_inv_11,V_inv_1T,V_inv_TT,L_var,I_var,TZ_theta,theta0,vc_initial,Y,T,U,index_obs,Bspline_uni,Z,X_uni,X_uni_ind,
 					Bspline_uni_ind,p_static,n,n2,m,s,n_minus_n2,nobs,nobs2,X_nc,Z_nc,nT,MAX_ITER,TOL,nZ,nXT,ZT_flag,ZT_nc,ZT);
@@ -1017,7 +1017,7 @@ List LMM_GeneralSpline (const MapVecd& Y,
 				{
 					flag_nonconvergence_cov = true;
 				}
-				profile_mat(i,j) 	+= loglik;
+				profile_mat(i,j) += loglik;
 				profile_mat(i,j) -= profile_vec(i)+profile_vec(j);
 			}
 		}
