@@ -13,30 +13,31 @@ typedef Map<VectorXi> MapVeci;
 typedef Map<MatrixXd> MapMatd;
 typedef Map<MatrixXi> MapMati;
 
-double LMM_GeneralSplineProfile (MatrixXd& pB, RowVectorXd& p_col_sum, VectorXd& q_row_sum, VectorXd& vcparams, 
-	VectorXd& vcparams0, MatrixXd& p, MatrixXd& p0, MatrixXd& P_theta, MatrixXd& q, MatrixXd& logp, 
-	VectorXd& Z_theta, VectorXd& X_uni_theta, VectorXd& TX_uni_theta, VectorXd& resi2, MatrixXd& resi, 
-	MatrixXd& D, vector<MatrixXd>& V, vector<MatrixXd>& V_inv, vector<VectorXd>& V_inv_1, vector<VectorXd>& V_inv_T, 
-	VectorXd& V_inv_11, VectorXd& V_inv_1T, VectorXd& V_inv_TT, VectorXd& L_var, MatrixXd& I_var, 
-	VectorXd& TZ_theta, 
-	const VectorXd& theta, const VectorXd& vc_initial, const VectorXd& Y, const VectorXd& T, 
-	const MatrixXd& U, const MatrixXi& index_obs, const MatrixXd& Bspline_uni, 
-	const MatrixXd& Z, const MatrixXd& X_uni, const VectorXi& X_uni_ind, 
-	const VectorXi& Bspline_uni_ind, const MatrixXd& p_static, const int& n, const int& n2, const int& m, 
-	const int& s, const int& n_minus_n2, const int& nobs, const int& nobs2, const int& X_nc, const int& Z_nc, const int& nT, const int& MAX_ITER, 
+double LMM_GeneralSplineProfile (MatrixXd& pB, RowVectorXd& p_col_sum, VectorXd& q_row_sum, VectorXd& vcparams,
+	VectorXd& vcparams0, MatrixXd& p, MatrixXd& p0, MatrixXd& P_theta, MatrixXd& q, MatrixXd& logp,
+	VectorXd& Z_theta, VectorXd& X_uni_theta, VectorXd& TX_uni_theta, VectorXd& resi2, MatrixXd& resi,
+	MatrixXd& D, vector<MatrixXd>& V, vector<MatrixXd>& V_inv, vector<VectorXd>& V_inv_1, vector<VectorXd>& V_inv_T,
+	VectorXd& V_inv_11, VectorXd& V_inv_1T, VectorXd& V_inv_TT, VectorXd& L_var, MatrixXd& I_var,
+	VectorXd& TZ_theta,
+	const VectorXd& theta, const VectorXd& vc_initial, const VectorXd& Y, const VectorXd& T,
+	const MatrixXd& U, const MatrixXi& index_obs, const MatrixXd& Bspline_uni,
+	const MatrixXd& Z, const MatrixXd& X_uni, const VectorXi& X_uni_ind,
+	const VectorXi& Bspline_uni_ind, const MatrixXd& p_static, const int& n, const int& n2, const int& m,
+	const int& s, const int& n_minus_n2, const int& nobs, const int& nobs2, const int& X_nc, const int& Z_nc, const int& nT, const int& MAX_ITER,
 	const double& TOL, const int& nZ, const int& nXT, const bool& ZT_flag, const int& ZT_nc, const MatrixXd& ZT)
 {
-/**** temporary variables **********************************************************************************************************************/
+	/**** temporary variables **********************************************************************************************************************/
 	double tol, V_inv_1R, V_inv_TR, V_inv_R2;
 	int iter, idx, idxx;
-// /* RT's test code */
-// time_t t1, // t2;
-// /* RT's test code end */
-/**** temporary variables **********************************************************************************************************************/
+	auto time = tic();
+	// /* RT's test code */
+	// time_t t1, // t2;
+	// /* RT's test code end */
+	/**** temporary variables **********************************************************************************************************************/
 
-/**** EM algorithm *****************************************************************************************************************************/
+	/**** EM algorithm *****************************************************************************************************************************/
 
-/**** parameter initialization *****************************************************************************************************************/
+	/**** parameter initialization *****************************************************************************************************************/
 	vcparams = vc_initial;
 	vcparams0 = vc_initial;
 
@@ -49,9 +50,9 @@ double LMM_GeneralSplineProfile (MatrixXd& pB, RowVectorXd& p_col_sum, VectorXd&
 	MatrixXd Bspline_Mat(n_minus_n2,m);
  	MatrixXd pthetaOverQ(P_theta.rows(), P_theta.cols());
 
-/**** parameter initialization *****************************************************************************************************************/
+	/**** parameter initialization *****************************************************************************************************************/
 
-/**** calculate residual ***********************************************************************************************************************/
+	/**** calculate residual ***********************************************************************************************************************/
 	X_uni_theta = X_uni*theta.segment(1, X_nc);
 	Z_theta = Z*theta.segment(nZ, Z_nc);
 	TX_uni_theta = X_uni*theta.segment(nXT, X_nc);
@@ -91,7 +92,7 @@ double LMM_GeneralSplineProfile (MatrixXd& pB, RowVectorXd& p_col_sum, VectorXd&
 			resi.block(idxx, k, index_obs(idx, 1), 1).noalias() -= T.segment(index_obs(idx, 0), index_obs(idx, 1))*TX_uni_theta(k);
 		}
 	}
-/**** calculate residual ***********************************************************************************************************************/
+	/**** calculate residual ***********************************************************************************************************************/
 
 	for (iter=0; iter<MAX_ITER; ++iter)
 	{
@@ -133,9 +134,9 @@ double LMM_GeneralSplineProfile (MatrixXd& pB, RowVectorXd& p_col_sum, VectorXd&
 		}
 		P_theta /= -2.;
 		P_theta = P_theta.array().exp();
-/**** update P_theta ***********************************************************************************************************************/
+		/**** update P_theta ***********************************************************************************************************************/
 
-/**** update q, q_row_sum ******************************************************************************************************************/
+		/**** update q, q_row_sum ******************************************************************************************************************/
 		// for (int i=0; i<n_minus_n2; ++i)
 		// {
 		// 	for (int k=0; k<m; ++k)
@@ -154,14 +155,14 @@ double LMM_GeneralSplineProfile (MatrixXd& pB, RowVectorXd& p_col_sum, VectorXd&
 		{
 			q.row(i) /= q_row_sum(i);
 		}
-/**** update q, q_row_sum ******************************************************************************************************************/
+		/**** update q, q_row_sum ******************************************************************************************************************/
 
-/**** E-step *******************************************************************************************************************************/
+		/**** E-step *******************************************************************************************************************************/
 
 
-/**** M-step *******************************************************************************************************************************/
+		/**** M-step *******************************************************************************************************************************/
 
-/**** update variance components parameters ************************************************************************************************/
+		/**** update variance components parameters ************************************************************************************************/
 		for (int i=0; i<n; ++i)
 		{
 			V_inv_1[i]  = V_inv[i].rowwise().sum();
@@ -233,9 +234,9 @@ double LMM_GeneralSplineProfile (MatrixXd& pB, RowVectorXd& p_col_sum, VectorXd&
 
 		vcparams = I_var.selfadjointView<Eigen::Upper>().ldlt().solve(L_var);
 		vcparams += vcparams0;
-/**** update variance components parameters ************************************************************************************************/
+		/**** update variance components parameters ************************************************************************************************/
 
-/**** update p *****************************************************************************************************************************/
+		/**** update p *****************************************************************************************************************************/
 		p.setZero();
 		pthetaOverQ = P_theta.array().colwise() / q_row_sum.array();
 
@@ -258,34 +259,34 @@ double LMM_GeneralSplineProfile (MatrixXd& pB, RowVectorXd& p_col_sum, VectorXd&
 		{
 			p.col(j) /= p_col_sum(j);
 		}
-/**** update p *****************************************************************************************************************************/
+		/**** update p *****************************************************************************************************************************/
 
-/**** M-step *******************************************************************************************************************************/
+		/**** M-step *******************************************************************************************************************************/
 
 
-/**** calculate the sum of absolute differences between estimates in the current and previous iterations ***********************************/
+		/**** calculate the sum of absolute differences between estimates in the current and previous iterations ***********************************/
 		tol = (vcparams-vcparams0).array().abs().sum();
 		tol += (p-p0).array().abs().sum();
-/**** calculate the sum of absolute differences between estimates in the current and previous iterations ***********************************/
+		/**** calculate the sum of absolute differences between estimates in the current and previous iterations ***********************************/
 
-/**** update parameters ********************************************************************************************************************/
+		/**** update parameters ********************************************************************************************************************/
 		vcparams0 = vcparams;
 		p0 = p;
-/**** update parameters ********************************************************************************************************************/
+		/**** update parameters ********************************************************************************************************************/
 
-/**** check convergence ********************************************************************************************************************/
+		/**** check convergence ********************************************************************************************************************/
 		if (tol < TOL)
 		{
 			break;
 		}
-/**** check convergence ********************************************************************************************************************/
+		/**** check convergence ********************************************************************************************************************/
 
-// /* RT's test code */
-// time(&t2);
-// Rcout << iter << '\t' << difftime(t2, t1) << '\t' << tol << endl;
-// /* RT's test code end */
+		// /* RT's test code */
+		// time(&t2);
+		// Rcout << iter << '\t' << difftime(t2, t1) << '\t' << tol << endl;
+		// /* RT's test code end */
 	}
-/**** EM algorithm *****************************************************************************************************************************/
+	/**** EM algorithm *****************************************************************************************************************************/
 
 	if (iter == MAX_ITER)
 	{
@@ -293,7 +294,7 @@ double LMM_GeneralSplineProfile (MatrixXd& pB, RowVectorXd& p_col_sum, VectorXd&
 	}
 	else
 	{
-/**** calculate the likelihood *************************************************************************************************************/
+		/**** calculate the likelihood *************************************************************************************************************/
 		double loglik;
 
 		logp = p.array().log();
@@ -310,7 +311,7 @@ double LMM_GeneralSplineProfile (MatrixXd& pB, RowVectorXd& p_col_sum, VectorXd&
 		pB = Bspline_uni*logp.transpose();
 
 		loglik = 0.;
-		for (int i=0; i<n2; ++i) 
+		for (int i=0; i<n2; ++i)
 		{
 			loglik += pB(Bspline_uni_ind(i),X_uni_ind(i));
 		}
@@ -335,7 +336,7 @@ double LMM_GeneralSplineProfile (MatrixXd& pB, RowVectorXd& p_col_sum, VectorXd&
 			idxx = index_obs(idx,0)-nobs2;
 			for (int k=0; k<m; ++k)
 			{
-				P_theta(i,k) = (resi.block(idxx, k, index_obs(idx, 1), 1).transpose()*V_inv[idx]*resi.block(idxx, k, index_obs(idx, 1), 1))(0, 0);
+				P_theta(i,k) = (resi.block(idxx, k, index_obs(idx, 1), 1).transpose() * V_inv[idx] * resi.block(idxx, k, index_obs(idx, 1), 1))(0, 0);
 			}
 		}
 		P_theta /= -2.;
@@ -365,8 +366,8 @@ double LMM_GeneralSplineProfile (MatrixXd& pB, RowVectorXd& p_col_sum, VectorXd&
 		{
 			loglik -= (resi2.segment(index_obs(i,0), index_obs(i, 1)).transpose()*V_inv[i]*resi2.segment(index_obs(i,0), index_obs(i, 1)))(0,0)/2.;
 		}
-/**** calculate the likelihood *************************************************************************************************************/
-
+		/**** calculate the likelihood *************************************************************************************************************/
+		Rcout << "LMM_GeneralSplineProfile " << chrono::duration<double>(tic() - time).count() << endl;
 		return loglik;
 	}
 } // LMM_GeneralSplineProfile
@@ -525,7 +526,7 @@ List LMM_GeneralSpline (const MapVecd& Y,
 	vector<MatrixXd> V_inv(n);
 	vector<VectorXd> V_inv_1(n);
 	vector<VectorXd> V_inv_T(n);
-	for (int i=0; i<n; ++i) 
+	for (int i=0; i<n; ++i)
 	{
 		V[i].resize(index_obs(i,1),index_obs(i,1));
 		V_inv[i].resize(index_obs(i,1),index_obs(i,1));
